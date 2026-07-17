@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { useEffect, useRef, useState } from 'react';
 import { botariStyles, characterOptions } from '../data/botariData';
 import { CharacterSelector } from './CharacterSelector';
@@ -87,7 +88,7 @@ export function Sidebar({
       <div className="section-block">
         <div className="section-header">
           <div className="section-title-row">
-            <img src="/assets/icons/character-section.svg" alt="" aria-hidden="true" className="section-title-icon" />
+            <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
             <h2 className="section-title">캐릭터 <span className="section-asterisk">*</span></h2>
           </div>
           <span className="section-count">{selectedCharacterCount}</span>
@@ -107,7 +108,7 @@ export function Sidebar({
       <div className="section-block">
         <div className="section-header">
           <div className="section-title-row">
-            <img src="/assets/icons/style-section.svg" alt="" aria-hidden="true" className="section-title-icon" />
+            <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
             <h2 className="section-title">스타일 <span className="section-asterisk">*</span></h2>
           </div>
           <span className="section-count">{selectedStyleCount}</span>
@@ -119,7 +120,7 @@ export function Sidebar({
         <div className="section-block section-block--prompt">
           <div className="section-header compact section-header--with-hint">
             <div className="section-title-row">
-              <img src="/assets/icons/prompt-section.svg" alt="" aria-hidden="true" className="section-title-icon" />
+              <img src={asset('assets/icons/prompt-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
               <h2 className="section-title">프롬프트</h2>
             </div>
             <span className="section-hint">선택한 캐릭터, 스타일의 프롬프트는 자동 입력됩니다.</span>
@@ -163,7 +164,7 @@ export function Sidebar({
         </div>
 
         <button type="button" className="generate-cta" onClick={onGenerate} disabled={!canGenerate}>
-          <img src="/assets/icons/generate.svg" alt="" aria-hidden="true" className="generate-cta-icon" />
+          <img src={asset('assets/icons/generate.svg')} alt="" aria-hidden="true" className="generate-cta-icon" />
           생성하기
         </button>
       </div>

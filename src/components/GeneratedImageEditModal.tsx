@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { asset } from '../lib/asset';
 import { botariStyles, characterOptions } from '../data/botariData';
 import { CharacterSelector } from './CharacterSelector';
 import { StyleSelector } from './StyleSelector';
@@ -73,7 +74,7 @@ export function GeneratedImageEditModal({ isOpen, initialMode, currentValues, on
           {activeMode === 'character' ? (
             <section className="generated-image-edit-modal__section">
               <div className="generated-image-edit-modal__section-head">
-                <img src="/assets/icons/character-section.svg" alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
+                <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
                 <span>캐릭터</span>
               </div>
               <CharacterSelector
@@ -95,7 +96,7 @@ export function GeneratedImageEditModal({ isOpen, initialMode, currentValues, on
           {activeMode === 'style' ? (
             <section className="generated-image-edit-modal__section">
               <div className="generated-image-edit-modal__section-head">
-                <img src="/assets/icons/style-section.svg" alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
+                <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
                 <span>스타일</span>
               </div>
               <StyleSelector options={botariStyles} selectedValue={selectedStyle} onSelect={setSelectedStyle} />
@@ -105,7 +106,7 @@ export function GeneratedImageEditModal({ isOpen, initialMode, currentValues, on
           {activeMode === 'prompt' ? (
             <section className="generated-image-edit-modal__section">
               <div className="generated-image-edit-modal__section-head">
-                <img src="/assets/icons/prompt-section.svg" alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
+                <img src={asset('assets/icons/prompt-section.svg')} alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
                 <span>프롬프트</span>
               </div>
               <label className="generated-image-edit-modal__prompt-card">

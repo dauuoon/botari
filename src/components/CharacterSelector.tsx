@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 type CharacterOption = {
   value: string;
   label: string;
@@ -44,7 +45,7 @@ export function CharacterSelector({
             {selectedThumbnail ? <img src={selectedThumbnail} alt="" aria-hidden="true" className="character-trigger-thumb" /> : null}
             <span>{triggerLabel}</span>
           </span>
-          <img src="/assets/icons/chevron-down.svg" alt="" aria-hidden="true" className={`dropdown-chevron${isOpen ? ' is-open' : ''}`} />
+          <img src={asset('assets/icons/chevron-down.svg')} alt="" aria-hidden="true" className={`dropdown-chevron${isOpen ? ' is-open' : ''}`} />
         </button>
       ) : null}
       {shouldShowMenu ? (

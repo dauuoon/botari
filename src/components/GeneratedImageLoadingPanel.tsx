@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { IconButton } from './IconButton';
 
 type GeneratedImageLoadingPanelProps = {
@@ -17,7 +18,7 @@ export function GeneratedImageLoadingPanel({ title }: GeneratedImageLoadingPanel
         <div className="generated-loading-stage" aria-label="이미지 생성 중">
           <div className="generated-loading-halo" aria-hidden="true" />
           <div className="generated-loading-symbol-frame" aria-hidden="true">
-            <img className="generated-loading-symbol" src="/assets/logo/symbol.svg" alt="" />
+            <img className="generated-loading-symbol" src={asset('assets/logo/symbol.svg')} alt="" />
           </div>
           <p className="generated-loading-title">···한국의 미를 그려내는 중입니다···</p>
         </div>

@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { useState } from 'react';
 
 type ThreeDAssetExportPanelProps = {
@@ -45,7 +46,7 @@ export function ThreeDAssetExportPanel({ onAction }: ThreeDAssetExportPanelProps
           ) : null}
         </div>
         <button type="button" className="generated-image-download" onClick={handleDownload} aria-label="3D 에셋 다운로드">
-          <img src="/assets/icons/download.svg" alt="" aria-hidden="true" />
+          <img src={asset('assets/icons/download.svg')} alt="" aria-hidden="true" />
         </button>
       </div>
       <p className="generated-image-actions-hint">SIZE: 18.2MB</p>

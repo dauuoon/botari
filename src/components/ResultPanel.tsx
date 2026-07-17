@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { IconButton } from './IconButton';
 
 type ResultPanelProps = {
@@ -25,7 +26,7 @@ export function ResultPanel({ title, emptyLabel, onGenerateClick, isGenerateDisa
           {emptyVisualSrc ? (
             <img src={emptyVisualSrc} alt={emptyVisualAlt} aria-hidden="true" className="empty-visual" />
           ) : (
-            <img src="/assets/icons/result-empty.svg" alt="" aria-hidden="true" className="empty-mark" />
+            <img src={asset('assets/icons/result-empty.svg')} alt="" aria-hidden="true" className="empty-mark" />
           )}
           <p className="empty-copy">{emptyLabel}</p>
           <button type="button" className="empty-generate" aria-label={`${title} 생성하기`} onClick={onGenerateClick} disabled={isGenerateDisabled || !onGenerateClick}>

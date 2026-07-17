@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { useMemo } from 'react';
 
 type HistoryGalleryItem = {
@@ -54,7 +55,7 @@ export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelec
           <h2 className="history-gallery-panel__title">히스토리 ({items.length})</h2>
         </div>
         <button type="button" className="scroll-top-button scroll-top-button--rotated" aria-label="히스토리 닫기" onClick={onClose}>
-          <img src="/assets/icons/chevron-up-double.svg" alt="" aria-hidden="true" className="scroll-top-icon" />
+          <img src={asset('assets/icons/chevron-up-double.svg')} alt="" aria-hidden="true" className="scroll-top-icon" />
         </button>
       </header>
 

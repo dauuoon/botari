@@ -220,7 +220,7 @@ textarea:focus-visible {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/assets/logo/back.png') center center / cover no-repeat;
+  background: url(var(--base)assets/logo/back.png) center center / cover no-repeat;
   opacity: 0.2; /* 20% opacity */
   pointer-events: none;
   z-index: 0;
@@ -247,8 +247,8 @@ textarea:focus-visible {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.45) 0%, rgba(131, 193, 225, 0.98) 30%, rgba(234, 153, 137, 0.92) 60%, rgba(255, 255, 255, 0.55) 100%);
   background-size: 240% 100%;
   background-position: 0% 50%;
-  -webkit-mask: url('/assets/logo/symbol.svg') no-repeat center / contain;
-  mask: url('/assets/logo/symbol.svg') no-repeat center / contain;
+  -webkit-mask: url(var(--base)assets/logo/symbol.svg) no-repeat center / contain;
+  mask: url(var(--base)assets/logo/symbol.svg) no-repeat center / contain;
   animation: loadingTextGradient 4.8s ease-in-out infinite;
   filter: drop-shadow(0 0 8px rgba(255,255,255,0.08));
 }

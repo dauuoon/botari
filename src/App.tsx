@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { asset } from './lib/asset';
 import { Header } from './components/Header';
 import { GeneratedImageLoadingPanel } from './components/GeneratedImageLoadingPanel';
 import { GeneratedImagePanel } from './components/GeneratedImagePanel';
@@ -31,11 +32,11 @@ type EditableImageState = {
   poseLabel: string;
 };
 
-const BASE_2D_IMAGE_SRC = '/assets/generated/2d-completed.jpg';
-const BACKGROUND_OFF_IMAGE_SRC = '/assets/generated/2d-completed-remove.jpg';
-const EDIT_2D_IMAGE_SRC = '/assets/generated/2d-completed-3dstyle.jpg';
-const PROMPT_EDIT_2D_IMAGE_SRC = '/assets/generated/2d-completed-3dstyle-acc.jpg';
-const POSE_2D_IMAGE_SRC = '/assets/generated/:Users:dawoonkim:Desktop:botari:public:assets:generated:2d-completed-3dstyle.jpg-t.jpg';
+const BASE_2D_IMAGE_SRC = asset('assets/generated/2d-completed.jpg');
+const BACKGROUND_OFF_IMAGE_SRC = asset('assets/generated/2d-completed-remove.jpg');
+const EDIT_2D_IMAGE_SRC = asset('assets/generated/2d-completed-3dstyle.jpg');
+const PROMPT_EDIT_2D_IMAGE_SRC = asset('assets/generated/2d-completed-3dstyle-acc.jpg');
+const POSE_2D_IMAGE_SRC = asset('assets/generated/2d-completed-3dstyle.jpg');
 
 const getGeneratedImageSrc = (variant: HistoryItem['variant']) => {
   if (variant === 'background-off') {
@@ -191,8 +192,8 @@ export default function App() {
           id: historyIdRef.current++,
           title: '3D 에셋',
           kind: '3D 에셋',
-          thumbnail: '/assets/styles/character3d.svg',
-          imageSrc: '/assets/styles/character3d.svg',
+          thumbnail: asset('assets/styles/character3d.svg'),
+          imageSrc: asset('assets/styles/character3d.svg'),
           prompt: '3D 에셋 히스토리',
           createdAt: Date.now(),
           metadataItems: [
@@ -367,8 +368,8 @@ export default function App() {
                     onSkeletonChange={setIsSkeletonEnabled}
                     skeletonAvailable={isSkeletonAvailable}
                     onSkeletonSupportChange={setIsSkeletonAvailable}
-                    modelUrl={'/assets/generated/duck-example.glb'}
-                    referenceImageSrc={conversionPreviewImage?.imageSrc ?? '/assets/icons/result-empty.svg'}
+                    modelUrl={asset('assets/generated/duck-example.glb')}
+                    referenceImageSrc={conversionPreviewImage?.imageSrc ?? asset('assets/icons/result-empty.svg')}
                     onAction={(action) => {
                       setNotice(`임시 3D ${action} 이벤트가 실행되었습니다.`);
                     }}
@@ -377,7 +378,7 @@ export default function App() {
               </div>
               <div className="history-bar" aria-label="생성 히스토리">
                 <button type="button" className="history-button" aria-label="히스토리 열기" onClick={handleToggleHistoryGallery} aria-expanded={isHistoryGalleryOpen}>
-                  <img src="/assets/icons/history.svg" alt="" aria-hidden="true" className="history-icon" />
+                  <img src={asset('assets/icons/history.svg')} alt="" aria-hidden="true" className="history-icon" />
                   히스토리
                 </button>
                 {historyItems.length > 0 ? (
@@ -399,7 +400,7 @@ export default function App() {
                   </div>
                 ) : null}
                 <button type="button" className="scroll-top-button" aria-label="상단으로 이동" onClick={handleToggleHistoryGallery} aria-expanded={isHistoryGalleryOpen}>
-                  <img src="/assets/icons/chevron-up-double.svg" alt="" aria-hidden="true" className="scroll-top-icon" />
+                  <img src={asset('assets/icons/chevron-up-double.svg')} alt="" aria-hidden="true" className="scroll-top-icon" />
                 </button>
               </div>
             </>

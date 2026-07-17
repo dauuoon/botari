@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { ThreeDAssetViewer } from './ThreeDAssetViewer';
 import { ThreeDAssetInfo } from './ThreeDAssetInfo';
 import { ThreeDAssetExportPanel } from './ThreeDAssetExportPanel';
@@ -42,7 +43,7 @@ export function ThreeDAssetPanel({
   modelUrl,
 }: ThreeDAssetPanelProps) {
   const actionLabel = '+ 변환하기';
-  const hasPreviewThumbnail = referenceImageSrc !== '/assets/icons/result-empty.svg';
+  const hasPreviewThumbnail = referenceImageSrc !== asset('assets/icons/result-empty.svg');
 
   return (
     <section className="result-panel result-panel--three-d">

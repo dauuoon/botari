@@ -7,7 +7,7 @@ export default function HomePage() {
 
   useEffect(() => {
     let alive = true;
-    fetch('/assets/slide/manifest.json')
+    fetch(`${import.meta.env.BASE_URL}assets/slide/manifest.json`)
       .then((r) => r.json())
       .then((list: string[]) => {
         if (alive) setSlideCount(list.length);

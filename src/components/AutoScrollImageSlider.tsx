@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
+import { asset } from '../lib/asset';
 
 export function AutoScrollImageSlider() {
   const [images, setImages] = useState<string[]>([]);
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/assets/slide/manifest.json')
+    fetch(`${import.meta.env.BASE_URL}assets/slide/manifest.json`)
       .then((res) => res.json())
       .then((list: string[]) => {
         if (isMounted) {
           // 절대 경로로 변환
-          setImages(list.map((name) => `/assets/slide/${name}`));
+          setImages(list.map((name) => asset(`assets/slide/${name}`)));
         }
       })
       .catch(() => {

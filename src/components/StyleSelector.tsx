@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import type { StyleOption } from '../data/botariData';
 
 type StyleSelectorProps = {
@@ -19,7 +20,7 @@ export function StyleSelector({ options, selectedValue, onSelect }: StyleSelecto
           aria-label={option.label}
         >
           <img src={option.thumbnail} alt="" aria-hidden="true" className="style-tile-image" />
-          {selectedValue === option.id ? <img src="/assets/icons/check.svg" alt="" aria-hidden="true" className="style-tile-check" /> : null}
+          {selectedValue === option.id ? <img src={asset('assets/icons/check.svg')} alt="" aria-hidden="true" className="style-tile-check" /> : null}
           <span className="style-tile-label">{option.label}</span>
         </button>
       ))}

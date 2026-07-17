@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { useMemo, useState } from 'react';
 
 type ImageActionPanelProps = {
@@ -131,7 +132,7 @@ export function ImageActionPanel({ imageSrc, onAction }: ImageActionPanelProps) 
           ) : null}
         </div>
         <button type="button" className="generated-image-download" onClick={downloadGeneratedImage} aria-label="이미지 다운로드">
-          <img src="/assets/icons/download.svg" alt="" aria-hidden="true" />
+          <img src={asset('assets/icons/download.svg')} alt="" aria-hidden="true" />
         </button>
       </div>
       <p className="generated-image-actions-hint">사이즈: 1024 x 1024</p>

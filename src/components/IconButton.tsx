@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 type IconButtonProps = {
   ariaLabel: string;
   icon: 'gear' | 'bell' | 'profile' | 'expand' | 'close' | 'generate' | 'chevronDown' | 'history' | 'chevronUpDouble' | 'home';
@@ -8,16 +9,16 @@ type IconButtonProps = {
 };
 
 const iconSourceMap: Record<IconButtonProps['icon'], string> = {
-  gear: '/assets/icons/gear.svg',
-  bell: '/assets/icons/bell.svg',
-  profile: '/assets/icons/profile.svg',
-  expand: '/assets/icons/expand.svg',
-  close: '/assets/icons/close.svg',
-  generate: '/assets/icons/generate.svg',
-  chevronDown: '/assets/icons/chevron-down.svg',
-  history: '/assets/icons/history.svg',
-  chevronUpDouble: '/assets/icons/chevron-up-double.svg',
-  home: '/assets/icons/home.svg',
+  gear: asset('assets/icons/gear.svg'),
+  bell: asset('assets/icons/bell.svg'),
+  profile: asset('assets/icons/profile.svg'),
+  expand: asset('assets/icons/expand.svg'),
+  close: asset('assets/icons/close.svg'),
+  generate: asset('assets/icons/generate.svg'),
+  chevronDown: asset('assets/icons/chevron-down.svg'),
+  history: asset('assets/icons/history.svg'),
+  chevronUpDouble: asset('assets/icons/chevron-up-double.svg'),
+  home: asset('assets/icons/home.svg'),
 };
 
 export function IconButton({ ariaLabel, icon, active = false, onClick, className, imageClassName }: IconButtonProps) {

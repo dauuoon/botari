@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -10,7 +11,7 @@ type ThreeDAssetViewerProps = {
   modelUrl?: string;
 };
 
-export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSupportChange, modelUrl = '/assets/generated/rigged-example.glb' }: ThreeDAssetViewerProps) {
+export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSupportChange, modelUrl = asset('assets/generated/rigged-example.glb') }: ThreeDAssetViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const modelRootRef = useRef<THREE.Group | null>(null);

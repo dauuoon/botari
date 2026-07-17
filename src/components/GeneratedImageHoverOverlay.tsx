@@ -1,3 +1,4 @@
+import { asset } from '../lib/asset';
 import type { EditMode } from './GeneratedImageEditModal';
 
 type GeneratedImageHoverOverlayProps = {
@@ -23,7 +24,7 @@ export function GeneratedImageHoverOverlay({
       {isRefining ? (
         <div className="generated-image-hover-overlay__loading" aria-label="배경 요소 적용 중">
           <div className="generated-image-hover-overlay__loading-symbol" aria-hidden="true">
-            <img src="/assets/logo/symbol.svg" alt="" />
+            <img src={asset('assets/logo/symbol.svg')} alt="" />
           </div>
         </div>
       ) : null}
@@ -33,15 +34,15 @@ export function GeneratedImageHoverOverlay({
             <span className="generated-image-hover-overlay__group-label">편집</span>
             <span className="generated-image-hover-overlay__divider" aria-hidden="true">|</span>
             <button type="button" className="generated-image-hover-overlay__chip" onClick={() => onOpenEditMode('character')}>
-              <img src="/assets/icons/character-section.svg" alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
+              <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
               캐릭터
             </button>
             <button type="button" className="generated-image-hover-overlay__chip" onClick={() => onOpenEditMode('style')}>
-              <img src="/assets/icons/style-section.svg" alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
+              <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
               스타일
             </button>
             <button type="button" className="generated-image-hover-overlay__chip" onClick={() => onOpenEditMode('prompt')}>
-              <img src="/assets/icons/prompt-section.svg" alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
+              <img src={asset('assets/icons/prompt-section.svg')} alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
               프롬프트
             </button>
           </div>
@@ -55,7 +56,7 @@ export function GeneratedImageHoverOverlay({
               aria-disabled={isPoseApplied}
               onClick={onGeneratePose}
             >
-              <img src="/assets/icons/pose.svg" alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
+              <img src={asset('assets/icons/pose.svg')} alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
               포즈
             </button>
           </div>
