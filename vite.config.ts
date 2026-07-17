@@ -61,6 +61,10 @@ function generateSlideManifestPluginBuild(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), generateSlideManifestPlugin(), generateSlideManifestPluginBuild()],
+export default defineConfig(({ mode }) => {
+  const isProd = mode === 'production';
+  return {
+    base: isProd ? '/botari/' : '/',
+    plugins: [react(), generateSlideManifestPlugin(), generateSlideManifestPluginBuild()],
+  };
 });

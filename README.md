@@ -2,11 +2,24 @@
 
 한국 전통문화 특화 생성형 AI 이미지 플랫폼의 보따리 이미지 생성 초기 화면을 구현한 React + Vite 프런트엔드입니다.
 
+## 배포
+
+이 프로젝트는 GitHub Pages에 자동 배포됩니다.
+
+- 프로덕션 URL: https://dauuoon.github.io/botari/
+- 브랜치: `main`에 푸시 시 GitHub Actions가 빌드 후 Pages에 배포합니다.
+
 ## 실행
 
 ```bash
 npm install
 npm run dev
+```
+
+프로덕션 빌드는 아래 명령으로 생성됩니다.
+
+```bash
+npm run build
 ```
 
 ## 구성
