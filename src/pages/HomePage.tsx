@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { asset } from '../lib/asset';
 import { Header } from '../components/Header';
 import { AutoScrollImageSlider } from '../components';
 
@@ -23,7 +24,14 @@ export default function HomePage() {
     <div className="app-shell">
       <Header />
       <main className="landing-main">
-        <section className="landing-hero" aria-label="보따리 소개">
+        <section
+          className="landing-hero"
+          aria-label="보따리 소개"
+          style={{
+            ['--landing-bg-url' as any]: `url(${asset('assets/logo/back.png')})`,
+            ['--landing-symbol-url' as any]: `url(${asset('assets/logo/symbol.svg')})`,
+          }}
+        >
           <div className="landing-headline" aria-label="타이틀">
             <div className="landing-symbol" aria-hidden="true" />
             <h1 className="landing-title">

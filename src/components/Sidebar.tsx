@@ -1,5 +1,5 @@
 import { asset } from '../lib/asset';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { botariStyles, characterOptions } from '../data/botariData';
 import { CharacterSelector } from './CharacterSelector';
 import { StyleSelector } from './StyleSelector';
@@ -35,53 +35,86 @@ export function Sidebar({
 }: SidebarProps) {
   const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
   const prefixOverlayRef = useRef<HTMLDivElement | null>(null);
-  const [prefixPadding, setPrefixPadding] = useState(0);
   const selectedCharacterOption = characterOptions.find((option) => option.value === selectedCharacter);
   const selectedCharacterCount = selectedCharacter ? '1/1' : '0/1';
   const selectedStyleCount = selectedStyle ? '1/1' : '0/1';
-  const overlayPrompt = promptPrefix ? `${promptPrefix}\n` : '';
+  const overlayPrompt = promptPrefix ? `${promptPrefix}\n\n` : '';
+  const composedPrefix = overlayPrompt;
+  const prefixLen = composedPrefix.length;
+  const fullPromptValue = composedPrefix + prompt;
 
   useEffect(() => {
-    const overlay = prefixOverlayRef.current;
-
-    if (!promptPrefix || !overlay) {
-      setPrefixPadding(0);
-      return;
-    }
-
-    const updatePadding = () => {
-      setPrefixPadding(overlay.offsetHeight);
-    };
-
-    updatePadding();
-
-    const resizeObserver = new ResizeObserver(updatePadding);
-    resizeObserver.observe(overlay);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [promptPrefix]);
-
-  useEffect(() => {
-    if (!promptPrefix) {
-      return;
-    }
-
+    if (!promptPrefix) return;
     const input = promptInputRef.current;
-    if (!input) {
-      return;
-    }
-
-    window.requestAnimationFrame(() => {
+    const overlay = prefixOverlayRef.current;
+    if (!input) return;
+    requestAnimationFrame(() => {
       input.focus({ preventScroll: true });
-      const nextCaretPosition = input.value.length;
-      input.setSelectionRange(nextCaretPosition, nextCaretPosition);
-      window.requestAnimationFrame(() => {
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+      requestAnimationFrame(() => {
         input.scrollTop = input.scrollHeight;
+        if (overlay) overlay.style.transform = `translateY(-${input.scrollTop}px)`;
       });
     });
   }, [promptPrefix]);
+
+  useEffect(() => {
+    const input = promptInputRef.current;
+    const overlay = prefixOverlayRef.current;
+    if (!input || !overlay) return;
+    const handleScroll = () => {
+      overlay.style.transform = `translateY(-${input.scrollTop}px)`;
+    };
+    input.addEventListener('scroll', handleScroll);
+    return () => input.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const enforceCaretBoundary = (el: HTMLTextAreaElement) => {
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start < prefixLen || end < prefixLen) {
+      el.setSelectionRange(prefixLen, prefixLen);
+    }
+  };
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    if (!promptPrefix) return;
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const atPrefix = start <= prefixLen || end <= prefixLen;
+    const blockedKeys = ['Backspace', 'Delete'];
+    if (atPrefix && (blockedKeys.includes(e.key) || (e.key.length === 1 && !e.metaKey && !e.ctrlKey))) {
+      e.preventDefault();
+      enforceCaretBoundary(el);
+    }
+  };
+
+  const handleSelect: React.ReactEventHandler<HTMLTextAreaElement> = (e) => {
+    if (!promptPrefix) return;
+    enforceCaretBoundary(e.currentTarget);
+  };
+
+  const handlePaste: React.ClipboardEventHandler<HTMLTextAreaElement> = (e) => {
+    if (!promptPrefix) return;
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? 0;
+    if (start < prefixLen) {
+      e.preventDefault();
+      const pasteText = e.clipboardData.getData('text');
+      const current = el.value;
+      const after = current.slice(prefixLen);
+      const next = composedPrefix + pasteText + after;
+      onPromptChange(pasteText + after);
+      requestAnimationFrame(() => {
+        el.value = next;
+        el.setSelectionRange(next.length, next.length);
+        const overlay = prefixOverlayRef.current;
+        if (overlay) overlay.style.transform = `translateY(-${el.scrollTop}px)`;
+      });
+    }
+  };
 
   return (
     <aside className="sidebar">
@@ -128,26 +161,37 @@ export function Sidebar({
           <div className="prompt-card prompt-card--editor">
             {promptPrefix ? (
               <div className="prompt-card__overlay-shell">
-                <div ref={prefixOverlayRef} className="prompt-card__overlay-text">{overlayPrompt}</div>
+                <div ref={prefixOverlayRef} className="prompt-card__overlay-mirror">
+                  <span className="prompt-mirror-prefix">{composedPrefix}</span>
+                  <span className="prompt-mirror-user">{prompt}</span>
+                </div>
                 <textarea
                   ref={promptInputRef}
-                  value={prompt}
-                  onChange={(event) => onPromptChange(event.target.value)}
-                  onFocus={(event) => {
-                    const input = event.currentTarget;
-                    window.requestAnimationFrame(() => {
-                      const caretPosition = input.value.length;
-                      input.setSelectionRange(caretPosition, caretPosition);
+                  value={fullPromptValue}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const userPart = v.slice(Math.min(prefixLen, v.length));
+                    onPromptChange(userPart);
+                    const overlay = prefixOverlayRef.current;
+                    if (overlay) overlay.style.transform = `translateY(-${e.currentTarget.scrollTop}px)`;
+                  }}
+                  onKeyDown={handleKeyDown}
+                  onSelect={handleSelect}
+                  onPaste={handlePaste}
+                  onFocus={(e) => {
+                    const input = e.currentTarget;
+                    requestAnimationFrame(() => {
+                      const end = input.value.length;
+                      if (input.selectionStart !== end || input.selectionEnd !== end) {
+                        input.setSelectionRange(end, end);
+                      }
                       input.scrollTop = input.scrollHeight;
+                      const overlay = prefixOverlayRef.current;
+                      if (overlay) overlay.style.transform = `translateY(-${input.scrollTop}px)`;
                     });
                   }}
                   className="prompt-input prompt-input--prefix"
-                  style={{
-                    fontSize: '14px',
-                    lineHeight: 1.6,
-                    paddingTop: `${Math.max(prefixPadding + 24, 52)}px`,
-                  }}
-                  placeholder="추가로 강조하고 싶은 내용을 입력하세요."
+                  style={{ fontSize: '14px', lineHeight: 1.45, color: 'transparent', caretColor: '#fff' }}
                 />
               </div>
             ) : (
@@ -156,7 +200,7 @@ export function Sidebar({
                 value={prompt}
                 onChange={(event) => onPromptChange(event.target.value)}
                 className="prompt-input"
-                style={{ fontSize: '14px', lineHeight: 1.6 }}
+                style={{ fontSize: '14px', lineHeight: 1.45 }}
                 placeholder="생성할 이미지에 상세한 특징을 입력하세요."
               />
             )}
