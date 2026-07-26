@@ -30,7 +30,7 @@ export function CharacterSelector({
   onSelect,
   showTrigger = true,
   allowDeselect = false,
-  inlineLabel = '캐릭터 선택 옵션',
+  inlineLabel = '생성 개체 선택 옵션',
 }: CharacterSelectorProps) {
   const triggerLabel = selectedLabel || defaultLabel;
   const hasSelection = Boolean(selectedValue);

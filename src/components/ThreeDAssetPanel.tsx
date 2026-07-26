@@ -1,8 +1,9 @@
 import { asset } from '../lib/asset';
-import { ThreeDAssetViewer } from './ThreeDAssetViewer';
+import { ThreeDAssetViewer, ThreeDAssetViewerHandle } from './ThreeDAssetViewer';
 import { ThreeDAssetInfo } from './ThreeDAssetInfo';
 import { ThreeDAssetExportPanel } from './ThreeDAssetExportPanel';
 import { IconButton } from './IconButton';
+import { useState } from 'react';
 
 type MetadataItem = {
   label: string;
@@ -24,6 +25,7 @@ type ThreeDAssetPanelProps = {
   modelUrl?: string;
   referenceImageSrc: string;
   onAction: (action: 'format' | 'download') => void;
+  viewerRef?: React.Ref<ThreeDAssetViewerHandle>;
 };
 
 export function ThreeDAssetPanel({
@@ -41,9 +43,12 @@ export function ThreeDAssetPanel({
   skeletonAvailable = true,
   onSkeletonSupportChange,
   modelUrl,
+  viewerRef,
 }: ThreeDAssetPanelProps) {
   const actionLabel = '+ 변환하기';
   const hasPreviewThumbnail = referenceImageSrc !== asset('assets/icons/result-empty.svg');
+  const [polygonCount, setPolygonCount] = useState<number | null>(null);
+  const [isAutoRigging, setIsAutoRigging] = useState(false);
 
   return (
     <section className="result-panel result-panel--three-d">
@@ -57,8 +62,11 @@ export function ThreeDAssetPanel({
       {hasAsset ? (
         <div className="result-panel-body result-panel-body--three-d">
           <div className="three-d-asset-stage">
-            <ThreeDAssetViewer wireframe={wireframe} skeleton={skeleton} onSkeletonSupportChange={onSkeletonSupportChange} modelUrl={modelUrl} />
-            <div className="three-d-asset-stage__wireframe">
+            <ThreeDAssetViewer ref={viewerRef} wireframe={wireframe} skeleton={skeleton} onSkeletonSupportChange={onSkeletonSupportChange} modelUrl={modelUrl} onMeshStats={({ polygonCount }) => setPolygonCount(polygonCount)} />
+            {isAutoRigging ? (
+              <div className="three-d-asset-stage__loading" role="status" aria-live="polite">자동 리깅 중…</div>
+            ) : null}
+            <div className="three-d-asset-stage__wireframe three-d-asset-stage__wireframe--secondary">
               <span className="three-d-asset-stage__wireframe-label">Wireframe</span>
               <button
                 type="button"
@@ -70,25 +78,29 @@ export function ThreeDAssetPanel({
                 <span className="three-d-asset-stage__wireframe-thumb" aria-hidden="true" />
               </button>
             </div>
-            <div className="three-d-asset-stage__wireframe three-d-asset-stage__wireframe--secondary">
+            <div className="three-d-asset-stage__wireframe">
               <span className="three-d-asset-stage__wireframe-label">Skeleton</span>
               <button
                 type="button"
-                className={`three-d-asset-stage__wireframe-switch${skeleton ? ' is-on' : ''}${!skeletonAvailable ? ' is-disabled' : ''}`}
-                aria-label="스켈레톤 전환"
-                aria-pressed={skeleton}
-                onClick={() => skeletonAvailable && onSkeletonChange(!skeleton)}
-                disabled={!skeletonAvailable}
-                title={skeletonAvailable ? undefined : '이 모델에는 스켈레톤이 없습니다'}
+                className="three-d-asset-stage__wireframe-switch auto-rigging-button"
+                aria-label="자동리깅 수행"
+                onClick={() => {
+                  if (isAutoRigging || skeleton) return;
+                  setIsAutoRigging(true);
+                  window.setTimeout(() => {
+                    setIsAutoRigging(false);
+                    onSkeletonChange(true);
+                  }, 5000);
+                }}
               >
-                <span className="three-d-asset-stage__wireframe-thumb" aria-hidden="true" />
+                <span className="auto-rigging-label">자동리깅</span>
               </button>
             </div>
           </div>
 
           <div className="three-d-asset-footer">
-            <ThreeDAssetInfo referenceImageSrc={referenceImageSrc} />
-            <ThreeDAssetExportPanel onAction={onAction} />
+            <ThreeDAssetInfo referenceImageSrc={referenceImageSrc} polygonCount={polygonCount ?? undefined} />
+            <ThreeDAssetExportPanel onAction={onAction} modelUrl={modelUrl} />
           </div>
         </div>
       ) : (

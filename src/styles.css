@@ -197,6 +197,192 @@ textarea:focus-visible {
   min-height: 0;
 }
 
+/* Slide-in Image Edit Bar positioned above the left sidebar */
+.image-edit-bar {
+  position: fixed;
+  top: 64px; /* below header */
+  left: 0;
+  width: 380px; /* same as sidebar */
+  height: calc(100vh - 64px);
+  background: var(--g-800);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.02), 6px 0 24px rgba(0,0,0,0.32);
+  transform: translateX(-100%);
+  transition: transform 240ms cubic-bezier(0.2, 0, 0, 1);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-edit-bar.is-open {
+  transform: translateX(0);
+}
+
+/* Character tab mode: attach to the right of the sidebar and shrink width by ~half */
+.image-edit-bar.mode-character {
+  /* 위치/폭은 민화유지와 동일하게 기본값을 사용 (left:0, width:380px) */
+  left: 0;
+  right: auto;
+  width: 380px;
+}
+.image-edit-bar.mode-character .image-edit-bar__body {
+  padding: 30px;         /* 기본 패딩과 동일하게 유지 */
+}
+.image-edit-bar.mode-character .editbar-content {
+  overflow-y: scroll;            /* 항상 표시 시도 */
+  scrollbar-gutter: stable both-edges; /* 거터 공간을 항상 확보 */
+  scrollbar-width: thin;         /* Firefox: 얇은 스크롤바 */
+  padding-bottom: 56px;          /* 캐릭터 포즈 아래로 더 스크롤 가능 */
+}
+/* 얇고 은은한 WebKit 스크롤바 */
+.image-edit-bar.mode-character .editbar-content::-webkit-scrollbar { width: 6px; height: 6px; }
+.image-edit-bar.mode-character .editbar-content::-webkit-scrollbar-track { background: transparent; }
+.image-edit-bar.mode-character .editbar-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
+  border-radius: 8px;
+}
+.image-edit-bar.mode-character .editbar-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.28);
+}
+
+.image-edit-bar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.image-edit-bar__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #f7f7f8;
+}
+
+.image-edit-bar__close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  color: #f7f7f8;
+}
+.image-edit-bar__close:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.image-edit-bar__body {
+  padding: 30px; /* match .sidebar padding */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* top scroll area only */
+}
+
+/* scrollable top content inside edit bar */
+.editbar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 25px; /* match .sidebar gap between blocks */
+  overflow-y: scroll;            /* 항상 표시 시도 */
+  scrollbar-width: thin;         /* Firefox */
+  scrollbar-gutter: stable;      /* 레이아웃 변동 방지 */
+  min-height: 0;
+  padding-bottom: 24px; /* 아래로 약간 더 스크롤 여유 */
+}
+
+/* 얇고 은은한 WebKit 스크롤바 (글로벌) */
+.editbar-content::-webkit-scrollbar { width: 6px; height: 6px; }
+.editbar-content::-webkit-scrollbar-track { background: transparent; }
+.editbar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 8px; }
+.editbar-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+
+/* Editbar tabs */
+.editbar-tablist {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2분할 폭 */
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+.editbar-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px; /* 생성 개체 드롭다운 높이와 동일 */
+  padding: 0 14px; /* 드롭다운과 동일 패딩 기준 */
+  border-radius: 10px; /* 드롭다운 반경과 동일 */
+  border: 1px solid var(--g-600);
+  background: var(--g-700);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+}
+.editbar-tab.is-active {
+  border: 1px solid #8ec9eb;         /* 유형/포즈 선택 상태와 동일 */
+  background: rgba(142,201,235,0.30); /* 유형/포즈 선택 배경과 동일 */
+  box-shadow: none;
+}
+
+/* Editbar switch (background ON/OFF) */
+.editbar-switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.editbar-switch-label { color: rgba(255,255,255,0.8); font-size: 12px; }
+.editbar-switch {
+  width: 40px;
+  height: 22px;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.editbar-switch.is-on {
+  background: #8ec9eb;
+  justify-content: flex-end;
+}
+.editbar-switch-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+}
+
+/* Segmented buttons */
+.editbar-segment {
+  display: grid;                 /* 3분할 그리드 */
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.editbar-segment--cols2 {
+  grid-template-columns: 1fr 1fr; /* 2분할 그리드 */
+}
+.editbar-segbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;                   /* 칸 전체 폭 차지 */
+  height: 44px;                  /* 현재 높이 유지 */
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #f7f7f8;
+  font-size: 14px;
+  font-weight: 600;
+}
+.editbar-segbtn.is-selected {
+  border-color: #8ec9eb;
+  background: rgba(142,201,235,0.30);
+}
+
 /* Landing page layout */
 .landing-main {
   display: block;
@@ -298,6 +484,73 @@ textarea:focus-visible {
   color: rgba(247, 247, 248, 0.4);
   font-size: 12px;
   font-weight: 300;
+}
+
+/* Landing CTA */
+.landing-cta-wrap {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.landing-cta-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  text-decoration: none;
+  color: #0b0d0f;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: #ffffff;
+  box-shadow: 0 10px 18px rgba(11, 13, 15, 0.22);
+  transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: visible; /* allow outer glow to show */
+}
+
+/* Hover: remove any outline/line, keep subtle lift only */
+.landing-cta-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.01);
+  box-shadow: 0 12px 18px rgba(11, 13, 15, 0.22);
+}
+
+/* Keyboard focus maintains accessibility outline */
+.landing-cta-button:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+/* Gradient glow around the button */
+.landing-cta-button::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 18px;
+  background: var(--linear);
+  filter: blur(16px);
+  opacity: 0; /* 기본 상태: 글로우 숨김 */
+  z-index: -1;
+  pointer-events: none;
+  transition: opacity 0.25s ease, filter 0.25s ease, inset 0.25s ease;
+}
+
+/* Hover: 강화된 그라데이션 글로우 */
+.landing-cta-button:hover::after {
+  inset: -14px;
+  filter: blur(20px);
+  opacity: 0.45; /* 더 은은한 글로우 */
+}
+
+.landing-cta-button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .live-indicator {
@@ -432,6 +685,12 @@ textarea:focus-visible {
   font-size: 10px;
   font-weight: 300;
   color: rgba(247, 247, 248, 0.5);
+}
+
+/* warning/attention variant for hints */
+.section-hint--warning {
+  color: var(--r-700);
+  font-weight: 500;
 }
 
 .section-title-row {
@@ -624,6 +883,11 @@ textarea:focus-visible {
   opacity: 0.92;
 }
 
+.style-tile[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.8; /* slightly less dim when locked */
+}
+
 .style-tile-image {
   position: absolute;
   inset: 0;
@@ -631,6 +895,7 @@ textarea:focus-visible {
   height: 100%;
   object-fit: cover;
   z-index: 0;
+  pointer-events: none; /* let button receive hover for native title */
 }
 
 .style-tile-check {
@@ -641,6 +906,7 @@ textarea:focus-visible {
   height: 28px;
   transform: translate(-50%, -50%);
   z-index: 2;
+  pointer-events: none; /* avoid blocking hover */
 }
 
 .style-tile-label {
@@ -653,6 +919,7 @@ textarea:focus-visible {
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.92));
+  pointer-events: none; /* allow parent button to expose title */
 }
 
 .style-tile:not(.is-selected) .style-tile-label {
@@ -688,11 +955,122 @@ textarea:focus-visible {
 }
 
 .prompt-card {
-  height: 200px;
+  height: 140px;
   border-radius: 10px;
   background: var(--g-800);
   padding: 0;
   overflow: hidden;
+}
+
+/* Read-only auto prompt box */
+.prompt-prefix-card {
+  height: 44px;
+  border-radius: 10px;
+  background: #12161c;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  min-width: 0; /* allow text to shrink, not icon */
+}
+
+.prompt-prefix-text {
+  color: rgba(247, 247, 248, 0.72);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip; /* manual leading ellipsis via JS */
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: plaintext;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.prompt-prefix-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: grid;
+  place-items: center;
+  color: rgba(247,247,248,0.6);
+}
+
+.prompt-prefix-expand {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(33, 37, 44);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  flex: 0 0 28px; /* keep fixed size regardless of text */
+}
+.prompt-prefix-expand img { width: 20px; height: 20px; display: block; }
+.prompt-prefix-expand:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.prompt-prefix-expand:active { transform: translateY(0); }
+
+/* Prompt modal */
+.prompt-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+.prompt-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 13, 0.66);
+  backdrop-filter: blur(3px);
+}
+.prompt-modal__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(36vw, 720px);
+  min-width: 280px;
+  max-height: 70vh;
+  min-height: 40%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #141a21;
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.48);
+  display: flex;
+  flex-direction: column;
+}
+.prompt-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+.prompt-modal__title {
+  margin: 0;
+  font-size: 15px;
+}
+.prompt-modal__close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+.prompt-modal__body {
+  padding: 12px 14px 16px;
+  overflow: auto;
+}
+.prompt-modal__text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--white);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .prompt-input {
@@ -1036,6 +1414,16 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.04);
 }
 
+/* Live 3D viewer within selected history card */
+.history-gallery-card__viewer {
+  position: absolute;
+  inset: 0;
+}
+.history-gallery-card__viewer .three-d-asset-viewer,
+.history-gallery-card__viewer .three-d-asset-viewer__canvas {
+  pointer-events: none; /* keep card clickable */
+}
+
 .history-gallery-empty {
   min-height: 260px;
   border-radius: 16px;
@@ -1236,6 +1624,45 @@ textarea:focus-visible {
   border-radius: 50%;
   background: #f5f5f5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+}
+
+/* Auto-rigging button shares switch height; allow text to fit */
+.auto-rigging-button {
+  /* override base switch fixed width to allow single-line label */
+  width: auto;
+  min-width: 40px;
+  height: 22px;
+  padding: 0 10px;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  background: #8ec9eb; /* match toggle ON fill */
+  color: #0b0d0f;      /* black label inside */
+}
+.auto-rigging-button:hover {
+  background: #7fc1e6;
+}
+
+/* Loading overlay on viewer while auto-rigging */
+.three-d-asset-stage__loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 12px;
+  letter-spacing: -0.01em;
+}
+
+/* Nudge auto-rigging text 2px downward */
+.auto-rigging-label {
+  position: relative;
+  top: 1px;
+  display: inline-block;
 }
 
 .three-d-asset-footer {
@@ -1461,6 +1888,78 @@ textarea:focus-visible {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.floating-edit-button {
+  position: absolute;
+  left: 50%; /* 이미지 기준 중앙 정렬 */
+  bottom: 20px; /* 조금 위로 */
+  height: 42px;
+  padding: 0 16px;
+  border: 2px solid #ffffff; /* 선색 화이트 */
+  border-radius: 999px; /* fully rounded */
+  background: #0b0d0f; /* 면색 블랙 */
+  color: #ffffff; /* 텍스트/아이콘 화이트 */
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(0,0,0,0.04);
+  position: absolute;
+  overflow: hidden; /* shine 효과가 버튼 밖으로 넘치지 않도록 */
+  transform: translate(-50%, 0); /* 중앙 기준 보정 */
+}
+.floating-edit-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.24) 46%, transparent 56%, transparent 100%);
+  transform: translateX(-140%);
+  animation: generateShine 2.8s linear infinite; /* 생성/수정 CTA와 동일한 빛 효과 */
+  pointer-events: none;
+}
+.floating-edit-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Material Symbols base (Outlined) */
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* Floating edit button icon with Material Symbols */
+.material-symbols-outlined.floating-edit-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  font-size: 18px; /* match visual weight next to 14px label */
+  line-height: 1;
+  color: currentColor; /* match button label color */
+  /* 면 아이콘(FILL=1)로 강제 지정 */
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+.floating-edit-button:hover {
+  filter: brightness(1.02);
+  transform: translate(-50%, -1px); /* 중앙 정렬 유지하면서 살짝 상승 */
+}
+
+.floating-edit-button:active {
+  transform: translate(-50%, 0); /* 중앙 정렬 유지 */
 }
 
 .generated-image--reveal {
@@ -1723,7 +2222,7 @@ textarea:focus-visible {
   position: relative;
   z-index: 1;
   width: min(100%, 404px);
-  height: min(100%, 430px);
+  height: min(100%, 560px); /* increased height for more editing space */
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);

@@ -33,10 +33,6 @@ export function GeneratedImageHoverOverlay({
           <div className="generated-image-hover-overlay__group generated-image-hover-overlay__group--edit">
             <span className="generated-image-hover-overlay__group-label">편집</span>
             <span className="generated-image-hover-overlay__divider" aria-hidden="true">|</span>
-            <button type="button" className="generated-image-hover-overlay__chip" onClick={() => onOpenEditMode('character')}>
-              <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
-              캐릭터
-            </button>
             <button type="button" className="generated-image-hover-overlay__chip" onClick={() => onOpenEditMode('style')}>
               <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="generated-image-hover-overlay__chip-icon" />
               스타일

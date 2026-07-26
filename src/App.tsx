@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { asset } from './lib/asset';
 import { Header } from './components/Header';
 import { GeneratedImageLoadingPanel } from './components/GeneratedImageLoadingPanel';
 import { GeneratedImagePanel } from './components/GeneratedImagePanel';
 import { HistoryGalleryPanel } from './components/HistoryGalleryPanel';
 import { ThreeDAssetPanel } from './components/ThreeDAssetPanel';
+import type { ThreeDAssetViewerHandle } from './components/ThreeDAssetViewer';
 import { Sidebar } from './components/Sidebar';
 import { ResultPanel } from './components/ResultPanel';
+import { ImageEditBar } from './components/ImageEditBar';
 import { botariStyles, characterOptions } from './data/botariData';
 import type { EditValues } from './components/GeneratedImageEditModal';
+import { asset } from './lib/asset';
 
 type GenerationStatus = 'idle' | 'loading' | 'generated';
 type AssetGenerationStatus = 'idle' | 'loading' | 'generated';
@@ -73,12 +75,33 @@ export default function App() {
   const [isSkeletonEnabled, setIsSkeletonEnabled] = useState(false);
   const [assetGenerationStatus, setAssetGenerationStatus] = useState<AssetGenerationStatus>('idle');
   const [isSkeletonAvailable, setIsSkeletonAvailable] = useState<boolean>(true);
+  const [isImageEditBarOpen, setIsImageEditBarOpen] = useState(false);
   const generationTimerRef = useRef<number | null>(null);
   const assetGenerationTimerRef = useRef<number | null>(null);
   const historyIdRef = useRef(1);
+  const threeDViewerRef = useRef<ThreeDAssetViewerHandle | null>(null);
+  const modelGlbUrl = asset('assets/generated/duck-example.glb');
+
+  const downloadFile = async (url: string, filename: string) => {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      setNotice('다운로드 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  };
 
   const buildMetadataItems = (state: EditableImageState) => [
-    { label: '캐릭터', value: state.character || '-' },
+    { label: '생성 개체', value: state.character || '-' },
     { label: '스타일', value: state.style || '-' },
     { label: '프롬프트', value: state.prompt || '-' },
   ];
@@ -123,7 +146,7 @@ export default function App() {
     () => [selectedCharacterPromptTemplate, selectedStylePromptTemplate].filter(Boolean).join('\n'),
     [selectedCharacterPromptTemplate, selectedStylePromptTemplate],
   );
-  const composePrompt = (prefix: string, userPrompt: string) => [prefix.trim(), userPrompt.trim()].filter(Boolean).join('\n');
+  const composePrompt = (prefix: string, userPrompt: string) => [userPrompt.trim(), prefix.trim()].filter(Boolean).join('\n');
 
   const handleGenerate = () => {
     if (generationTimerRef.current) {
@@ -166,7 +189,7 @@ export default function App() {
   const handleEmptyStateGenerate = () => {
     if (!selectedCharacter) {
       setIsCharacterOpen(true);
-      setNotice('캐릭터를 먼저 선택해 주세요.');
+      setNotice('생성 개체를 먼저 선택해 주세요.');
       return;
     }
 
@@ -188,11 +211,13 @@ export default function App() {
 
     assetGenerationTimerRef.current = window.setTimeout(() => {
       setHistoryItems((current) => {
+        const source2d = current.find((it) => it.kind === '2D 이미지') ?? null;
         const nextHistoryItem: HistoryItem = {
           id: historyIdRef.current++,
           title: '3D 에셋',
           kind: '3D 에셋',
-          thumbnail: asset('assets/styles/character3d.svg'),
+          // 원본 2D 이미지가 있으면 그 이미지를 썸네일로 사용해 가독성 향상
+          thumbnail: source2d?.imageSrc ?? asset('assets/styles/character3d.svg'),
           imageSrc: asset('assets/styles/character3d.svg'),
           prompt: '3D 에셋 히스토리',
           createdAt: Date.now(),
@@ -200,6 +225,7 @@ export default function App() {
             { label: '유형', value: '3D 에셋' },
             { label: '상태', value: '변환 완료' },
             { label: '프롬프트', value: '3D 에셋 히스토리' },
+            { label: '원본 2D', value: source2d ? `#${source2d.id}` : '-' },
           ],
           variant: '3d',
         };
@@ -207,6 +233,32 @@ export default function App() {
         setSelectedHistoryId(nextHistoryItem.id);
         setAssetGenerationStatus('generated');
         setNotice('3D 에셋이 히스토리에 추가되었습니다.');
+        // 추가 후 캔버스 렌더를 기다렸다가 스냅샷 캡처 (재시도 포함)
+        const SNAPSHOT_INITIAL_DELAY = 420; // 최초 대기 시간(ms)
+        const SNAPSHOT_MAX_ATTEMPTS = 12;   // 재시도 횟수 증가
+        const SNAPSHOT_INTERVAL = 160;      // 재시도 간격(ms)
+
+        const attemptCapture = (remaining: number) => {
+          // 뷰어 준비 전이면 대기 후 재시도
+          if (!threeDViewerRef.current?.isReady()) {
+            if (remaining > 0) {
+              window.setTimeout(() => attemptCapture(remaining - 1), SNAPSHOT_INTERVAL);
+            }
+            return;
+          }
+
+          const dataUrl = threeDViewerRef.current?.captureSnapshot() ?? null;
+          if (dataUrl) {
+            setHistoryItems((cur) =>
+              cur.map((it) => (it.id === nextHistoryItem.id ? { ...it, thumbnail: dataUrl, imageSrc: dataUrl } : it)),
+            );
+          } else if (remaining > 0) {
+            window.setTimeout(() => attemptCapture(remaining - 1), SNAPSHOT_INTERVAL);
+          }
+        };
+
+        window.setTimeout(() => attemptCapture(SNAPSHOT_MAX_ATTEMPTS), SNAPSHOT_INITIAL_DELAY);
+
         return [nextHistoryItem, ...current];
       });
     }, 8000);
@@ -303,6 +355,27 @@ export default function App() {
     <div className="app-shell">
       <Header />
       <main className="app-main">
+        <ImageEditBar
+          isOpen={isImageEditBarOpen}
+          onClose={() => setIsImageEditBarOpen(false)}
+          currentCharacterPromptTemplate={selectedCharacterPromptTemplate}
+          currentStyleId={selectedStyle}
+          onSubmit={({ styleId, userPrompt }) => {
+            const chosenStyleId = styleId || selectedStyle;
+            const stylePrompt = botariStyles.find((s) => s.id === chosenStyleId)?.promptTemplate || '';
+            const prefix = [selectedCharacterPromptTemplate, stylePrompt].filter(Boolean).join('\n');
+            const fullPrompt = [userPrompt.trim(), prefix.trim()].filter(Boolean).join('\n');
+            handleApplyEdit({ character: selectedCharacter, style: chosenStyleId, prompt: fullPrompt }, {
+              character: selectedCharacterLabel || '-',
+              style: botariStyles.find((opt) => opt.id === selectedStyle)?.label || '-',
+              prompt: displayedGeneratedImage?.prompt || '',
+              backgroundEnabled: true,
+              poseLabel: '기본',
+            });
+            // 제출 후에도 편집 바는 계속 열린 상태 유지
+            setIsImageEditBarOpen(true);
+          }}
+        />
         <Sidebar
           promptPrefix={promptPrefix}
           prompt={prompt}
@@ -314,11 +387,22 @@ export default function App() {
           onCharacterSelect={(value) => {
             setSelectedCharacter(value);
             setIsCharacterOpen(false);
+            // Force 'traditional' style selection before first image is generated
+            const hasFirst2D = Boolean(historyItems.find((it) => it.kind === '2D 이미지'));
+            if (!hasFirst2D) {
+              setSelectedStyle('traditional');
+            }
           }}
           selectedStyle={selectedStyle}
-          onStyleSelect={setSelectedStyle}
+          onStyleSelect={(value) => {
+            // Sidebar에서는 전통민화만 선택 가능(2차 편집에서만 다른 스타일 변경 가능)
+            if (value && value !== 'traditional') return;
+            setSelectedStyle(value);
+          }}
           onGenerate={handleGenerate}
           canGenerate={Boolean(selectedCharacter && selectedStyle)}
+          // 사이드바는 항상 잠금: 전통민화만 활성화, 다른 스타일은 2차 편집 모달에서만 변경 가능
+          isStyleLocked={true}
         />
         <section className="workspace" aria-label="이미지 생성 결과 영역">
           {isHistoryGalleryOpen ? (
@@ -346,6 +430,7 @@ export default function App() {
                     onApplyEdit={handleApplyEdit}
                     onGeneratePose={handleGeneratePose}
                     onToggleBackgroundElements={handleBackgroundElementsToggle}
+                    onToggleEditBar={() => setIsImageEditBarOpen((v) => !v)}
                     allowSecondaryEdit={Boolean(selected2dDetailItem)}
                     isPoseApplied={selected2dDetailItem?.variant === 'pose'}
                     initialBackgroundElementsEnabled={selected2dDetailItem?.variant === 'background-off' ? false : true}
@@ -368,11 +453,18 @@ export default function App() {
                     onSkeletonChange={setIsSkeletonEnabled}
                     skeletonAvailable={isSkeletonAvailable}
                     onSkeletonSupportChange={setIsSkeletonAvailable}
-                    modelUrl={asset('assets/generated/duck-example.glb')}
+                    modelUrl={modelGlbUrl}
                     referenceImageSrc={conversionPreviewImage?.imageSrc ?? asset('assets/icons/result-empty.svg')}
-                    onAction={(action) => {
-                      setNotice(`임시 3D ${action} 이벤트가 실행되었습니다.`);
+                    onAction={async (action) => {
+                      if (action === 'download') {
+                        setNotice('3D 에셋(.glb) 다운로드를 시작합니다.');
+                        await downloadFile(modelGlbUrl, 'botari-3d-asset.glb');
+                        setNotice('3D 에셋 다운로드가 완료되었습니다.');
+                      } else {
+                        setNotice('3D 포맷 옵션이 선택되었습니다.');
+                      }
                     }}
+                    viewerRef={threeDViewerRef}
                   />
                 )}
               </div>
@@ -383,7 +475,7 @@ export default function App() {
                 </button>
                 {historyItems.length > 0 ? (
                   <div className="history-list">
-                    {historyItems.map((item) => (
+                    {[...historyItems].reverse().map((item) => (
                       <button
                         key={item.id}
                         type="button"

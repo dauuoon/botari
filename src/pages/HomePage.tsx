@@ -4,22 +4,8 @@ import { Header } from '../components/Header';
 import { AutoScrollImageSlider } from '../components';
 
 export default function HomePage() {
-  const [slideCount, setSlideCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    fetch(`${import.meta.env.BASE_URL}assets/slide/manifest.json`)
-      .then((r) => r.json())
-      .then((list: string[]) => {
-        if (alive) setSlideCount(list.length);
-      })
-      .catch(() => {
-        if (alive) setSlideCount(null);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // 고정 노출 요구사항에 따라 총 장수를 523으로 표시
+  const TOTAL_COUNT = 523;
   return (
     <div className="app-shell">
       <Header />
@@ -36,16 +22,19 @@ export default function HomePage() {
             <div className="landing-symbol" aria-hidden="true" />
             <h1 className="landing-title">
               <span className="landing-title-line landing-title-strong">
-                {slideCount ? (
-                  <>
-                    <span className="landing-title-count">총 {slideCount}장</span> 한국의 아름다움을 그려내다
-                  </>
-                ) : (
-                  '한국의 아름다움을 그려내다'
-                )}
+                <span className="landing-title-count">총 {TOTAL_COUNT}장</span> 한국의 아름다움을 그려내다
               </span>
               <span className="landing-title-line landing-title-light">한국 전통민화 이미지 생성 AI</span>
             </h1>
+            <div className="landing-cta-wrap" aria-label="생성 바로가기">
+              <a
+                href={import.meta.env.BASE_URL || '/'}
+                className="landing-cta-button"
+                aria-label="이미지 생성 메인으로 이동"
+              >
+                생성하러가기
+              </a>
+            </div>
           </div>
           <div className="landing-slider">
             <AutoScrollImageSlider />

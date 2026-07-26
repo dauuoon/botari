@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { asset } from '../lib/asset';
-import { botariStyles, characterOptions } from '../data/botariData';
-import { CharacterSelector } from './CharacterSelector';
+import { botariStyles } from '../data/botariData';
 import { StyleSelector } from './StyleSelector';
 
-export type EditMode = 'character' | 'style' | 'prompt';
+export type EditMode = 'style' | 'prompt';
 
 export type EditValues = {
   character: string;
@@ -25,10 +24,7 @@ export function GeneratedImageEditModal({ isOpen, initialMode, currentValues, on
   const [selectedCharacter, setSelectedCharacter] = useState(currentValues.character);
   const [selectedStyle, setSelectedStyle] = useState(currentValues.style);
   const [prompt, setPrompt] = useState(currentValues.prompt);
-  const selectedCharacterOption = useMemo(
-    () => characterOptions.find((option) => option.value === selectedCharacter),
-    [selectedCharacter],
-  );
+  // Note: 2차 편집에서는 생성 개체 변경을 비활성화합니다. 값은 유지만 합니다.
 
   useEffect(() => {
     if (!isOpen) {
@@ -59,9 +55,6 @@ export function GeneratedImageEditModal({ isOpen, initialMode, currentValues, on
         </header>
 
         <div className="generated-image-edit-modal__tabs" role="tablist" aria-label="편집 항목 선택">
-          <button type="button" className={`generated-image-edit-modal__tab${activeMode === 'character' ? ' is-active' : ''}`} onClick={() => setActiveMode('character')}>
-            캐릭터
-          </button>
           <button type="button" className={`generated-image-edit-modal__tab${activeMode === 'style' ? ' is-active' : ''}`} onClick={() => setActiveMode('style')}>
             스타일
           </button>
@@ -71,28 +64,6 @@ export function GeneratedImageEditModal({ isOpen, initialMode, currentValues, on
         </div>
 
         <div className="generated-image-edit-modal__body">
-          {activeMode === 'character' ? (
-            <section className="generated-image-edit-modal__section">
-              <div className="generated-image-edit-modal__section-head">
-                <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="generated-image-edit-modal__section-icon" />
-                <span>캐릭터</span>
-              </div>
-              <CharacterSelector
-                options={characterOptions}
-                selectedValue={selectedCharacter}
-                selectedLabel={selectedCharacterOption?.label ?? ''}
-                defaultLabel="캐릭터 선택"
-                selectedThumbnail={selectedCharacterOption?.thumbnail ?? ''}
-                isOpen
-                onToggle={() => undefined}
-                onSelect={(value) => setSelectedCharacter(value)}
-                showTrigger={false}
-                allowDeselect
-                inlineLabel="캐릭터 선택 리스트"
-              />
-            </section>
-          ) : null}
-
           {activeMode === 'style' ? (
             <section className="generated-image-edit-modal__section">
               <div className="generated-image-edit-modal__section-head">

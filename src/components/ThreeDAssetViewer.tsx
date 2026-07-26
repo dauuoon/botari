@@ -1,5 +1,5 @@
 import { asset } from '../lib/asset';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -9,9 +9,16 @@ type ThreeDAssetViewerProps = {
   skeleton?: boolean;
   onSkeletonSupportChange?: (available: boolean) => void;
   modelUrl?: string;
+  onMeshStats?: (stats: { polygonCount: number }) => void;
 };
 
-export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSupportChange, modelUrl = asset('assets/generated/rigged-example.glb') }: ThreeDAssetViewerProps) {
+export type ThreeDAssetViewerHandle = {
+  isReady: () => boolean;
+  captureSnapshot: () => string | null;
+};
+
+export const ThreeDAssetViewer = forwardRef<ThreeDAssetViewerHandle, ThreeDAssetViewerProps>(
+  ({ wireframe, skeleton = false, onSkeletonSupportChange, modelUrl = asset('assets/generated/rigged-example.glb'), onMeshStats }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const modelRootRef = useRef<THREE.Group | null>(null);
@@ -37,7 +44,7 @@ export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSuppo
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
     camera.position.set(7.2, 4.8, 8.4);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setClearColor(0x0b0d0f, 1);
@@ -161,6 +168,7 @@ export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSuppo
         model.position.y -= 0.15;
         model.rotation.y = -0.9;
 
+        let polygonCount = 0;
         model.traverse((object) => {
           if ((object as THREE.Mesh).isMesh) {
             const mesh = object as THREE.Mesh;
@@ -172,6 +180,20 @@ export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSuppo
               });
             } else {
               materialStoreRef.current.push(meshMaterial);
+            }
+          }
+        });
+
+        // compute polygon count by summing triangles across meshes
+        model.traverse((object) => {
+          if ((object as THREE.Mesh).isMesh) {
+            const mesh = object as THREE.Mesh;
+            const geom = mesh.geometry as THREE.BufferGeometry | undefined;
+            if (geom) {
+              const index = geom.getIndex();
+              const pos = geom.getAttribute('position');
+              const tri = index ? Math.floor(index.count / 3) : pos ? Math.floor(pos.count / 3) : 0;
+              if (tri > 0) polygonCount += tri;
             }
           }
         });
@@ -288,6 +310,7 @@ export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSuppo
         camera.position.set(4.8, 3.8, 5.8);
         controls.update();
         setLoadState('ready');
+        onMeshStats?.({ polygonCount });
       },
       undefined,
       () => {
@@ -490,6 +513,23 @@ export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSuppo
     }
   }, [skeleton]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      isReady: () => loadState === 'ready',
+      captureSnapshot: () => {
+        const renderer = rendererRef.current;
+        if (!renderer || loadState !== 'ready') return null;
+        try {
+          return renderer.domElement.toDataURL('image/png');
+        } catch {
+          return null;
+        }
+      },
+    }),
+    [loadState],
+  );
+
   return (
     <div ref={containerRef} className="three-d-asset-viewer" aria-label="3D 캔버스">
       {loadState !== 'ready' ? (
@@ -504,4 +544,4 @@ export function ThreeDAssetViewer({ wireframe, skeleton = false, onSkeletonSuppo
       ) : null}
     </div>
   );
-}
+});

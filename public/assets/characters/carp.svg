@@ -1,1 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect width="64" height="64" rx="14" fill="#7d5c48"/><path d="M13 33c7-7 14-10 21-10 8 0 15 3 18 8" stroke="#f7f7f8" stroke-width="3.2" stroke-linecap="round"/><path d="M34 20c2 3 4 6 5 10" stroke="#f3d9cb" stroke-width="3.2" stroke-linecap="round"/><circle cx="42" cy="28" r="2.2" fill="#f7f7f8"/></svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_레이어_1" data-name="레이어_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64">
+  <!-- Generator: Adobe Illustrator 30.6.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 109)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: none;
+        stroke: #fff;
+        stroke-linecap: round;
+        stroke-width: 3.2px;
+      }
+
+      .st1 {
+        fill: #7d5c48;
+      }
+
+      .st2 {
+        fill: #fff;
+      }
+    </style>
+  </defs>
+  <rect class="st1" width="64" height="64" rx="14" ry="14"/>
+  <path class="st0" d="M13,33c7-7,14-9.81,21-10,10.6-.28,17.84,7.96,18,8"/>
+  <path class="st0" d="M33.03,17.51c11.48,8.49,5.43,24.03,5.43,24.03"/>
+  <circle class="st2" cx="46.4" cy="34.8" r="2.2"/>
+</svg>

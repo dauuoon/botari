@@ -1,5 +1,6 @@
 import { asset } from '../lib/asset';
 import { useMemo } from 'react';
+import { ThreeDAssetViewer } from './ThreeDAssetViewer';
 
 type HistoryGalleryItem = {
   id: number;
@@ -34,7 +35,8 @@ const formatDateLabel = (timestamp: number) => {
 
 export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelectItem, isOpen }: HistoryGalleryPanelProps) {
   const groupedItems = useMemo<HistoryGroup[]>(() => {
-    const sortedItems = [...items].sort((left, right) => right.createdAt - left.createdAt);
+    // 오래된 순(오름차순)으로 정렬
+    const sortedItems = [...items].sort((left, right) => left.createdAt - right.createdAt);
     const groups = new Map<string, HistoryGalleryItem[]>();
 
     sortedItems.forEach((item) => {
@@ -76,7 +78,13 @@ export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelec
                     onClick={() => onSelectItem(item.id)}
                     aria-label={`${item.kind} ${group.dateLabel} 선택`}
                   >
-                    <img src={item.thumbnail} alt="" aria-hidden="true" className={`history-gallery-card__image history-gallery-card__image--${item.variant}`} />
+                    {item.kind === '3D 에셋' && selectedHistoryId === item.id ? (
+                      <div className="history-gallery-card__viewer" aria-hidden="true">
+                        <ThreeDAssetViewer wireframe={false} skeleton={false} modelUrl={asset('assets/generated/duck-example.glb')} />
+                      </div>
+                    ) : (
+                      <img src={item.thumbnail} alt="" aria-hidden="true" className={`history-gallery-card__image history-gallery-card__image--${item.variant}`} />
+                    )}
                   </button>
                 ))}
               </div>
@@ -85,7 +93,6 @@ export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelec
         ) : (
           <div className="history-gallery-empty">
             <p className="history-gallery-empty__title">히스토리 내역이 없습니다.</p>
-            <p className="history-gallery-empty__text">2D 또는 3D 이미지를 생성하면 여기에 목록으로 표시됩니다.</p>
           </div>
         )}
       </div>

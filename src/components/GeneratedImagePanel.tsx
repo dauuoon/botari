@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconButton } from './IconButton';
 import { GeneratedImageMetadata } from './GeneratedImageMetadata';
-import { GeneratedImageEditModal, type EditMode, type EditValues } from './GeneratedImageEditModal';
-import { GeneratedImageHoverOverlay } from './GeneratedImageHoverOverlay';
+import type { EditValues } from './GeneratedImageEditModal';
 import { ImageActionPanel } from './ImageActionPanel';
 
 type ImageSnapshot = {
@@ -24,6 +23,7 @@ type GeneratedImagePanelProps = {
   onApplyEdit: (values: EditValues, snapshot: ImageSnapshot) => void;
   onGeneratePose: (snapshot: ImageSnapshot) => void;
   onToggleBackgroundElements: (nextEnabled: boolean, snapshot: ImageSnapshot) => void;
+  onToggleEditBar?: () => void;
   allowSecondaryEdit?: boolean;
   isPoseApplied?: boolean;
   initialBackgroundElementsEnabled?: boolean;
@@ -42,6 +42,7 @@ export function GeneratedImagePanel({
   onApplyEdit,
   onGeneratePose,
   onToggleBackgroundElements,
+  onToggleEditBar,
   allowSecondaryEdit = true,
   isPoseApplied = false,
   initialBackgroundElementsEnabled = true,
@@ -50,10 +51,10 @@ export function GeneratedImagePanel({
   const [isRefining, setIsRefining] = useState(false);
   const [isBackgroundElementsEnabled, setIsBackgroundElementsEnabled] = useState(initialBackgroundElementsEnabled);
   const [poseLabel, setPoseLabel] = useState('기본');
-  const [activeEditMode, setActiveEditMode] = useState<EditMode | null>(null);
+  // Legacy modal edit mode removed; using slide-in edit bar instead
   const refinementTimerRef = useRef<number | null>(null);
 
-  const currentCharacter = getMetadataValue(metadataItems, '캐릭터');
+  const currentCharacter = getMetadataValue(metadataItems, '생성 개체');
   const currentStyle = getMetadataValue(metadataItems, '스타일');
   const currentPrompt = prompt;
 
@@ -80,13 +81,10 @@ export function GeneratedImagePanel({
     }, REFINE_DELAY_MS);
   };
 
-  const handleOpenEditMode = (mode: EditMode) => {
-    setActiveEditMode(mode);
-  };
+  // const handleOpenEditMode = (mode: EditMode) => {};
 
   const handleApplyEdit = (values: EditValues) => {
     const snapshot = buildSnapshot();
-    setActiveEditMode(null);
     beginRefinement(() => onApplyEdit(values, snapshot));
   };
 
@@ -95,14 +93,11 @@ export function GeneratedImagePanel({
     const snapshot = buildSnapshot(nextEnabled);
 
     setIsBackgroundElementsEnabled(nextEnabled);
-    setActiveEditMode(null);
     beginRefinement(() => onToggleBackgroundElements(nextEnabled, snapshot));
   };
 
   const handleGeneratePose = () => {
     const snapshot = buildSnapshot();
-
-    setActiveEditMode(null);
     setPoseLabel('포즈 적용');
     beginRefinement(() => onGeneratePose(snapshot));
   };
@@ -134,29 +129,21 @@ export function GeneratedImagePanel({
             onMouseLeave={() => setIsHovered(false)}
           >
             <img key={imageSrc} src={imageSrc} alt="생성된 2D 이미지" className="generated-image generated-image--reveal" />
-            {allowSecondaryEdit && (isHovered || isRefining) ? (
-              <GeneratedImageHoverOverlay
-                isBackgroundElementsEnabled={isBackgroundElementsEnabled}
-                isRefining={isRefining}
-                isPoseApplied={isPoseApplied}
-                onOpenEditMode={handleOpenEditMode}
-                onGeneratePose={handleGeneratePose}
-                onToggleBackgroundElements={toggleBackgroundElements}
-              />
-            ) : null}
-            {allowSecondaryEdit && activeEditMode ? (
-              <GeneratedImageEditModal
-                isOpen
-                initialMode={activeEditMode}
-                currentValues={{
-                  character: currentCharacter,
-                  style: currentStyle,
-                  prompt: currentPrompt,
+            {/* Floating edit button for 2nd edit */}
+            {allowSecondaryEdit ? (
+              <button
+                type="button"
+                className="floating-edit-button"
+                aria-label="이미지 편집"
+                onClick={() => {
+                  if (onToggleEditBar) onToggleEditBar();
                 }}
-                onClose={() => setActiveEditMode(null)}
-                onSubmit={handleApplyEdit}
-              />
+              >
+                <span className="material-symbols-outlined floating-edit-icon" aria-hidden="true">draw</span>
+                이미지 편집
+              </button>
             ) : null}
+            {/* Legacy 2nd edit modal removed in favor of slide-in edit bar */}
           </div>
           <div className="generated-image-footer generated-image-footer--reveal">
             <GeneratedImageMetadata items={metadataItems} />
