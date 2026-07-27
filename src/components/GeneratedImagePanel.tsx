@@ -17,6 +17,7 @@ type ImageSnapshot = {
 type GeneratedImagePanelProps = {
   title: string;
   imageSrc: string;
+  fallbackImageSrc?: string;
   prompt: string;
   metadataItems: Array<{ label: string; value: string }>;
   onAction: (action: 'size' | 'format' | 'download') => void;
@@ -36,6 +37,7 @@ const getMetadataValue = (items: Array<{ label: string; value: string }>, label:
 export function GeneratedImagePanel({
   title,
   imageSrc,
+  fallbackImageSrc,
   prompt,
   metadataItems,
   onAction,
@@ -49,6 +51,7 @@ export function GeneratedImagePanel({
 }: GeneratedImagePanelProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(imageSrc);
   const [isBackgroundElementsEnabled, setIsBackgroundElementsEnabled] = useState(initialBackgroundElementsEnabled);
   const [poseLabel, setPoseLabel] = useState('기본');
   // Legacy modal edit mode removed; using slide-in edit bar instead
@@ -113,6 +116,11 @@ export function GeneratedImagePanel({
     };
   }, [imageSrc, initialBackgroundElementsEnabled, isPoseApplied]);
 
+  // Ensure displayed image updates when parent passes a new imageSrc
+  useEffect(() => {
+    setCurrentSrc(imageSrc);
+  }, [imageSrc]);
+
   return (
     <section className="result-panel">
       <header className="result-panel-header">
@@ -128,7 +136,17 @@ export function GeneratedImagePanel({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           >
-            <img key={imageSrc} src={imageSrc} alt="생성된 2D 이미지" className="generated-image generated-image--reveal" />
+            <img
+              key={currentSrc}
+              src={currentSrc}
+              alt="생성된 2D 이미지"
+              className="generated-image generated-image--reveal"
+              onError={() => {
+                if (fallbackImageSrc && currentSrc !== fallbackImageSrc) {
+                  setCurrentSrc(fallbackImageSrc);
+                }
+              }}
+            />
             {/* Floating edit button for 2nd edit */}
             {allowSecondaryEdit ? (
               <button

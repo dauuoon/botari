@@ -17,6 +17,7 @@ type HistoryGalleryPanelProps = {
   onClose: () => void;
   onSelectItem: (itemId: number) => void;
   isOpen: boolean;
+  modelUrl?: string;
 };
 
 type HistoryGroup = {
@@ -33,7 +34,7 @@ const formatDateLabel = (timestamp: number) => {
   return `${year}.${month}.${day}`;
 };
 
-export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelectItem, isOpen }: HistoryGalleryPanelProps) {
+export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelectItem, isOpen, modelUrl }: HistoryGalleryPanelProps) {
   const groupedItems = useMemo<HistoryGroup[]>(() => {
     // 오래된 순(오름차순)으로 정렬
     const sortedItems = [...items].sort((left, right) => left.createdAt - right.createdAt);
@@ -80,7 +81,7 @@ export function HistoryGalleryPanel({ items, selectedHistoryId, onClose, onSelec
                   >
                     {item.kind === '3D 에셋' && selectedHistoryId === item.id ? (
                       <div className="history-gallery-card__viewer" aria-hidden="true">
-                        <ThreeDAssetViewer wireframe={false} skeleton={false} modelUrl={asset('assets/generated/duck-example.glb')} />
+                        <ThreeDAssetViewer wireframe={false} skeleton={false} modelUrl={modelUrl || asset('assets/generated/duck-example.glb')} />
                       </div>
                     ) : (
                       <img src={item.thumbnail} alt="" aria-hidden="true" className={`history-gallery-card__image history-gallery-card__image--${item.variant}`} />

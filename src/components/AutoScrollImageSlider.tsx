@@ -4,14 +4,24 @@ import { asset } from '../lib/asset';
 export function AutoScrollImageSlider() {
   const [images, setImages] = useState<string[]>([]);
 
+  function shuffle<T>(arr: T[]): T[] {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   useEffect(() => {
     let isMounted = true;
     fetch(`${import.meta.env.BASE_URL}assets/slide/manifest.json`)
       .then((res) => res.json())
       .then((list: string[]) => {
         if (isMounted) {
-          // 절대 경로로 변환
-          setImages(list.map((name) => asset(`assets/slide/${name}`)));
+          // 절대 경로로 변환 후 셔플
+          const abs = list.map((name) => asset(`assets/slide/${name}`));
+          setImages(shuffle(abs));
         }
       })
       .catch(() => {

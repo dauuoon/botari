@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { botariStyles } from '../data/botariData';
+import ReactDOM from 'react-dom';
+import { botariStyles, posePromptTemplates, modePromptTemplates, characterTypePromptTemplates, backgroundPromptTemplates } from '../data/botariData';
 import { StyleSelector } from './StyleSelector';
 import { asset } from '../lib/asset';
 
@@ -37,9 +38,46 @@ export function ImageEditBar({ isOpen, onClose, currentCharacterPromptTemplate =
 
   // Prompt prefix (auto) = character + selected style prompt templates
   const selectedStylePromptTemplate = useMemo(() => botariStyles.find((s) => s.id === selectedStyle)?.promptTemplate || '', [selectedStyle]);
+  const selectedPosePromptTemplate = useMemo(() => {
+    if (activeTab !== 'character') return '';
+    if (!pose) return '';
+    return posePromptTemplates[pose] || '';
+  }, [activeTab, pose]);
+
+  const selectedModePromptTemplate = useMemo(() => {
+    if (activeTab !== 'character') return '';
+    return modePromptTemplates.character || '';
+  }, [activeTab]);
+
+  const selectedCharacterTypePromptTemplate = useMemo(() => {
+    if (activeTab !== 'character') return '';
+    if (!characterType) return '';
+    return characterTypePromptTemplates[characterType] || '';
+  }, [activeTab, characterType]);
+
+  const selectedBackgroundPromptTemplate = useMemo(() => {
+    // Background ON/OFF prompts apply to 'keep' mode only to avoid conflict with style-specific backgrounds in 'character'.
+    if (activeTab !== 'keep') return '';
+    return backgroundEnabled ? backgroundPromptTemplates.on : backgroundPromptTemplates.off;
+  }, [activeTab, backgroundEnabled]);
+
   const composedPrefix = useMemo(
-    () => [currentCharacterPromptTemplate, selectedStylePromptTemplate].filter(Boolean).join('\n'),
-    [currentCharacterPromptTemplate, selectedStylePromptTemplate]
+    () => [
+      currentCharacterPromptTemplate,
+      selectedStylePromptTemplate,
+      selectedModePromptTemplate,
+      selectedBackgroundPromptTemplate,
+      selectedCharacterTypePromptTemplate,
+      selectedPosePromptTemplate,
+    ].filter(Boolean).join('\n'),
+    [
+      currentCharacterPromptTemplate,
+      selectedStylePromptTemplate,
+      selectedModePromptTemplate,
+      selectedBackgroundPromptTemplate,
+      selectedCharacterTypePromptTemplate,
+      selectedPosePromptTemplate,
+    ]
   );
 
   // Tail fit for prefix like Sidebar
@@ -93,14 +131,16 @@ export function ImageEditBar({ isOpen, onClose, currentCharacterPromptTemplate =
 
   const [isPromptModalOpen, setPromptModalOpen] = useState(false);
 
-  // 탭 전환 시 기본값 적용: 민화유지=배경 ON, 캐릭터화=배경 OFF + 포즈는 T포즈 기본
+  // 탭 전환 시 기본값 적용: 민화유지=배경 ON, 캐릭터화=배경 OFF + 4족/포즈없음 기본
   useEffect(() => {
     if (activeTab === 'keep') {
       setBackgroundEnabled(true);
       setPose('none');
     } else {
       setBackgroundEnabled(false);
-      setPose('t');
+      // 캐릭터화 진입 시 초기값을 4족 + 포즈없음으로 설정
+      setCharacterType((prev) => prev ?? '4');
+      setPose('none');
     }
   }, [activeTab]);
 
@@ -176,7 +216,13 @@ export function ImageEditBar({ isOpen, onClose, currentCharacterPromptTemplate =
                       key={opt.id}
                       type="button"
                       className={`editbar-segbtn${characterType === opt.id ? ' is-selected' : ''}`}
-                      onClick={() => setCharacterType(opt.id as any)}
+                      onClick={() => {
+                        setCharacterType(opt.id as any);
+                        if (opt.id === '4') {
+                          // 4족 선택 시 포즈는 자동으로 '포즈없음'
+                          setPose('none');
+                        }
+                      }}
                     >
                       {opt.label}
                     </button>
@@ -266,20 +312,32 @@ export function ImageEditBar({ isOpen, onClose, currentCharacterPromptTemplate =
         </div>
       </div>
 
-      {isPromptModalOpen ? (
-        <div className="prompt-modal" role="dialog" aria-modal="true" aria-label="전체 프롬프트">
-          <div className="prompt-modal__backdrop" onClick={() => setPromptModalOpen(false)} />
-          <div className="prompt-modal__card">
-            <div className="prompt-modal__header">
-              <h3 className="prompt-modal__title">전체 프롬프트</h3>
-              <button type="button" className="prompt-modal__close" aria-label="닫기" onClick={() => setPromptModalOpen(false)}>✕</button>
-            </div>
-            <div className="prompt-modal__body">
-              <pre className="prompt-modal__text">{[userPrompt.trim(), composedPrefix.trim()].filter(Boolean).join('\n')}</pre>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {isPromptModalOpen
+        ? ReactDOM.createPortal(
+            (
+              <div className="prompt-modal" role="dialog" aria-modal="true" aria-label="전체 프롬프트">
+                <div className="prompt-modal__backdrop" onClick={() => setPromptModalOpen(false)} />
+                <div className="prompt-modal__card">
+                  <div className="prompt-modal__header">
+                    <h3 className="prompt-modal__title">전체 프롬프트</h3>
+                    <button
+                      type="button"
+                      className="prompt-modal__close"
+                      aria-label="닫기"
+                      onClick={() => setPromptModalOpen(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="prompt-modal__body">
+                    <pre className="prompt-modal__text">{[userPrompt.trim(), composedPrefix.trim()].filter(Boolean).join('\n')}</pre>
+                  </div>
+                </div>
+              </div>
+            ),
+            document.body
+          )
+        : null}
     </aside>
   );
 }

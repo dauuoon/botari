@@ -24,6 +24,7 @@ type HistoryItem = {
   createdAt: number;
   metadataItems: Array<{ label: string; value: string }>;
   variant: 'base' | 'background-on' | 'background-off' | 'pose' | 'edit' | 'edit-prompt' | '3d';
+  sourceSet?: 'tiger_01' | 'tiger_03';
 };
 
 type EditableImageState = {
@@ -32,33 +33,60 @@ type EditableImageState = {
   prompt: string;
   backgroundEnabled: boolean;
   poseLabel: string;
+  sourceSet?: 'tiger_01' | 'tiger_03';
+  imageSrc?: string;
 };
 
-const BASE_2D_IMAGE_SRC = asset('assets/generated/2d-completed.jpg');
-const BACKGROUND_OFF_IMAGE_SRC = asset('assets/generated/2d-completed-remove.jpg');
-const EDIT_2D_IMAGE_SRC = asset('assets/generated/2d-completed-3dstyle.jpg');
-const PROMPT_EDIT_2D_IMAGE_SRC = asset('assets/generated/2d-completed-3dstyle-acc.jpg');
-const POSE_2D_IMAGE_SRC = asset('assets/generated/2d-completed-3dstyle.jpg');
-
-const getGeneratedImageSrc = (variant: HistoryItem['variant']) => {
-  if (variant === 'background-off') {
-    return BACKGROUND_OFF_IMAGE_SRC;
-  }
-
-  if (variant === 'pose') {
-    return POSE_2D_IMAGE_SRC;
-  }
-
-  if (variant === 'edit') {
-    return EDIT_2D_IMAGE_SRC;
-  }
-
-  if (variant === 'edit-prompt') {
-    return PROMPT_EDIT_2D_IMAGE_SRC;
-  }
-
-  return BASE_2D_IMAGE_SRC;
+// Resolve generated image path from selected character/style to static assets under public/assets/generated
+const styleIdToFolderSuffix: Record<string, string> = {
+  traditional: 'basic',
+  hanji: 'paper',
+  ceramic: 'ceramics',
+  clay: 'clay',
+  felt: 'wool',
+  plush: 'plush',
+  knit: 'knitting',
+  neon: 'neon',
+  gameart: 'game',
 };
+
+function resolveCharacterValueFromLabel(label: string): string | null {
+  const hit = characterOptions.find((c) => c.label === label);
+  return hit?.value ?? null;
+}
+
+function resolveStyleIdFromLabel(label: string): string | null {
+  const hit = botariStyles.find((s) => s.label === label);
+  return hit?.id ?? null;
+}
+
+function resolveGeneratedImageUrl(
+  charLabel: string,
+  styleLabel: string,
+  opts?: { sourceSet?: 'tiger_01' | 'tiger_03'; backgroundEnabled?: boolean }
+): string | null {
+  const charValue = resolveCharacterValueFromLabel(charLabel);
+  const styleId = resolveStyleIdFromLabel(styleLabel);
+  if (!charValue || !styleId) return null;
+  const styleSuffix = styleIdToFolderSuffix[styleId];
+  if (!styleSuffix) return null;
+
+  // Special handling for tiger sets
+  if (charValue === 'tiger') {
+    const sourceSet: 'tiger_01' | 'tiger_03' = opts?.sourceSet ?? 'tiger_01';
+    // Special-case: tiger_03 + wool (felt) + background toggle variants
+    if (sourceSet === 'tiger_03' && styleSuffix === 'wool' && typeof opts?.backgroundEnabled === 'boolean') {
+      const file = opts.backgroundEnabled ? 'tiger_wool_backon_03.png' : 'tiger_wool_backoff_03.png';
+      return asset(`assets/generated/tiger/tiger_03/tiger_wool/${file}`);
+    }
+    const baseName = `tiger_${styleSuffix}`;
+    const suffix = sourceSet === 'tiger_03' ? '_03.png' : '_01.png';
+    return asset(`assets/generated/tiger/${sourceSet}/${baseName}/${baseName}${suffix}`);
+  }
+
+  const baseName = `${charValue}_${styleSuffix}`;
+  return asset(`assets/generated/${charValue}/${baseName}/${baseName}_01.png`);
+}
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
@@ -76,11 +104,14 @@ export default function App() {
   const [assetGenerationStatus, setAssetGenerationStatus] = useState<AssetGenerationStatus>('idle');
   const [isSkeletonAvailable, setIsSkeletonAvailable] = useState<boolean>(true);
   const [isImageEditBarOpen, setIsImageEditBarOpen] = useState(false);
+  const [lastTigerSourceSet, setLastTigerSourceSet] = useState<'tiger_01' | 'tiger_03' | null>(null);
+  const [haetaeSeqIndex, setHaetaeSeqIndex] = useState(0);
+  const [haetaeNextFollowUpSet, setHaetaeNextFollowUpSet] = useState<'haetae_01' | 'haetae_02' | null>(null);
   const generationTimerRef = useRef<number | null>(null);
   const assetGenerationTimerRef = useRef<number | null>(null);
   const historyIdRef = useRef(1);
   const threeDViewerRef = useRef<ThreeDAssetViewerHandle | null>(null);
-  const modelGlbUrl = asset('assets/generated/duck-example.glb');
+  const defaultModelGlbUrl = asset('assets/generated/duck-example.glb');
 
   const downloadFile = async (url: string, filename: string) => {
     try {
@@ -106,8 +137,13 @@ export default function App() {
     { label: '프롬프트', value: state.prompt || '-' },
   ];
 
-  const pushGeneratedHistoryItem = (state: EditableImageState, variant: HistoryItem['variant']) => {
-    const imageSrc = getGeneratedImageSrc(variant);
+  const pushGeneratedHistoryItem = (
+    state: EditableImageState,
+    variant: HistoryItem['variant'],
+    overrideImageSrc?: string,
+  ) => {
+    const resolved = overrideImageSrc || resolveGeneratedImageUrl(state.character, state.style, { sourceSet: state.sourceSet });
+    const imageSrc = resolved || asset('assets/generated/2d-completed.jpg');
     const nextHistoryItem: HistoryItem = {
       id: historyIdRef.current++,
       title: '2D 이미지',
@@ -118,6 +154,7 @@ export default function App() {
       createdAt: Date.now(),
       metadataItems: buildMetadataItems(state),
       variant,
+      sourceSet: state.sourceSet,
     };
 
     setHistoryItems((current) => [nextHistoryItem, ...current]);
@@ -155,8 +192,37 @@ export default function App() {
 
     const selectedStyleLabel = botariStyles.find((option) => option.id === selectedStyle)?.label ?? '-';
     const fullPrompt = composePrompt(promptPrefix, prompt);
+    let sourceSet: 'tiger_01' | 'tiger_03' | undefined = undefined;
+    if (selectedCharacterLabel === '호랑이') {
+      // 랜덤으로 tiger_01 / tiger_03 선택
+      const pool: Array<'tiger_01' | 'tiger_03'> = ['tiger_01', 'tiger_03'];
+      const next = pool[Math.floor(Math.random() * pool.length)];
+      sourceSet = next;
+      setLastTigerSourceSet(next);
+    }
+    // Haetae: 첫 생성 시 무작위 세트의 -1, 바로 다음 생성은 같은 세트의 -2
+    let haetaeOverrideImage: string | undefined;
+    if (selectedCharacterLabel === '해태') {
+      let set: 'haetae_01' | 'haetae_02';
+      let idx: 0 | 1;
+      if (haetaeNextFollowUpSet) {
+        set = haetaeNextFollowUpSet;
+        idx = 1; // second image in same set
+        setHaetaeNextFollowUpSet(null);
+      } else {
+        set = Math.random() < 0.5 ? 'haetae_01' : 'haetae_02';
+        idx = 0; // first image
+        setHaetaeNextFollowUpSet(set);
+      }
+      const setNum = set === 'haetae_01' ? '01' : '02';
+      haetaeOverrideImage = asset(`assets/generated/haetae/${set}/haetae_basic/haetae_basic_${setNum}-${idx + 1}.png`);
+      setHaetaeSeqIndex(idx);
+    }
+    const baseImage = haetaeOverrideImage
+      || resolveGeneratedImageUrl(selectedCharacterLabel || '-', selectedStyleLabel, { sourceSet })
+      || asset('assets/generated/2d-completed.jpg');
     const nextGeneratedImage = {
-      imageSrc: BASE_2D_IMAGE_SRC,
+      imageSrc: baseImage,
       prompt: fullPrompt,
       metadataItems: buildMetadataItems({
         character: selectedCharacterLabel || '-',
@@ -164,6 +230,7 @@ export default function App() {
         prompt: fullPrompt || '-',
         backgroundEnabled: true,
         poseLabel: '기본',
+        sourceSet,
       }),
     };
 
@@ -179,8 +246,10 @@ export default function App() {
           prompt: fullPrompt,
           backgroundEnabled: true,
           poseLabel: '기본',
+          sourceSet,
         },
         'base',
+        haetaeOverrideImage,
       );
       setNotice(`임시 생성 이벤트가 실행되었습니다. 프롬프트: ${fullPrompt}`);
     }, 8000);
@@ -278,6 +347,16 @@ export default function App() {
   const conversionPreviewImage = generationStatus === 'loading' ? null : selected2dHistoryItem ?? latest2dHistoryItem;
   const canConvertTo3D = Boolean(latest2dHistoryItem) && generationStatus !== 'loading' && assetGenerationStatus !== 'loading';
   const isSelectedThreeDAsset = selectedHistoryItem?.kind === '3D 에셋';
+  const computedModelGlbUrl = useMemo(() => {
+    const ref = selected2dDetailItem?.imageSrc || latest2dHistoryItem?.imageSrc || '';
+    if (ref.includes('assets/generated/haetae/haetae_01/')) {
+      return asset('assets/generated/haetae/haetae_01/haetae_3D/haetae_3D_01.glb');
+    }
+    if (ref.includes('assets/generated/haetae/haetae_02/')) {
+      return asset('assets/generated/haetae/haetae_02/haetae_3D/haetae_3D_02.glb');
+    }
+    return defaultModelGlbUrl;
+  }, [selected2dDetailItem?.imageSrc, latest2dHistoryItem?.imageSrc]);
   const groupedHistoryItems = useMemo(() => {
     const sortedItems = [...historyItems].sort((left, right) => right.createdAt - left.createdAt);
     const groups = new Map<string, HistoryItem[]>();
@@ -305,16 +384,30 @@ export default function App() {
   };
 
   const handleBackgroundElementsToggle = (nextEnabled: boolean, snapshot: EditableImageState) => {
-    pushGeneratedHistoryItem({ ...snapshot, backgroundEnabled: nextEnabled }, nextEnabled ? 'background-on' : 'background-off');
+    // Special rule: Tiger tiger_01 lacks background variants; keep original image.
+    let override: string | undefined;
+    const currentItem = selected2dDetailItem;
+    if (snapshot.character === '호랑이') {
+      const set = currentItem?.sourceSet ?? snapshot.sourceSet;
+      if (set !== 'tiger_03') {
+        // No background variants: keep the current image
+        override = currentItem?.imageSrc;
+      } else if (snapshot.style === '양모펠트') {
+        // tiger_03 + wool has backon/backoff
+        override = resolveGeneratedImageUrl(snapshot.character, snapshot.style, { sourceSet: 'tiger_03', backgroundEnabled: nextEnabled }) || currentItem?.imageSrc;
+      }
+    }
+
+    pushGeneratedHistoryItem({ ...snapshot, backgroundEnabled: nextEnabled, sourceSet: currentItem?.sourceSet ?? snapshot.sourceSet }, nextEnabled ? 'background-on' : 'background-off', override);
     setNotice(`배경요소를 ${nextEnabled ? 'ON' : 'OFF'} 상태로 다시 생성했습니다.`);
   };
 
   const handleGeneratePose = (snapshot: EditableImageState) => {
-    pushGeneratedHistoryItem({ ...snapshot, poseLabel: '포즈 적용' }, 'pose');
+    pushGeneratedHistoryItem({ ...snapshot, poseLabel: '포즈 적용', sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet }, 'pose');
     setNotice('포즈 이미지를 새로 생성했습니다.');
   };
 
-  const handleApplyEdit = (values: EditValues, snapshot: EditableImageState) => {
+  const handleApplyEdit = (values: EditValues, snapshot: EditableImageState, overrideImageSrc?: string) => {
     const nextCharacter = values.character
       ? characterOptions.find((opt) => opt.value === values.character)?.label || snapshot.character
       : snapshot.character;
@@ -334,8 +427,10 @@ export default function App() {
         prompt: nextPrompt,
         backgroundEnabled: snapshot.backgroundEnabled,
         poseLabel: snapshot.poseLabel,
+        sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
       },
       nextVariant,
+      overrideImageSrc,
     );
     setNotice('2차 편집이 적용되었습니다.');
   };
@@ -360,18 +455,78 @@ export default function App() {
           onClose={() => setIsImageEditBarOpen(false)}
           currentCharacterPromptTemplate={selectedCharacterPromptTemplate}
           currentStyleId={selectedStyle}
-          onSubmit={({ styleId, userPrompt }) => {
+          onSubmit={({ tab, styleId, characterType, pose, userPrompt }) => {
             const chosenStyleId = styleId || selectedStyle;
             const stylePrompt = botariStyles.find((s) => s.id === chosenStyleId)?.promptTemplate || '';
             const prefix = [selectedCharacterPromptTemplate, stylePrompt].filter(Boolean).join('\n');
             const fullPrompt = [userPrompt.trim(), prefix.trim()].filter(Boolean).join('\n');
-            handleApplyEdit({ character: selectedCharacter, style: chosenStyleId, prompt: fullPrompt }, {
-              character: selectedCharacterLabel || '-',
-              style: botariStyles.find((opt) => opt.id === selectedStyle)?.label || '-',
-              prompt: displayedGeneratedImage?.prompt || '',
-              backgroundEnabled: true,
-              poseLabel: '기본',
-            });
+
+            // Determine override image for special cases
+            let overrideImageSrc: string | undefined;
+            // Haetae characterization images: follow current set (01/02) and folder layout
+            if ((selectedCharacterLabel === '해태') && tab === 'character') {
+              const currentSrc = selected2dDetailItem?.imageSrc || displayedGeneratedImage?.imageSrc || '';
+              const set: 'haetae_01' | 'haetae_02' = currentSrc.includes('/haetae_02/') ? 'haetae_02' : 'haetae_01';
+              const setNum = set === 'haetae_01' ? '01' : '02';
+              const base = `assets/generated/haetae/${set}/haetae_character`;
+              if (characterType === '4') {
+                overrideImageSrc = asset(`${base}/4foot/haetae_character_4foot_${setNum}.png`);
+              } else if (characterType === '2-short') {
+                if (pose === 't') {
+                  // haetae_01 uses 'tpose' subfolder, haetae_02 does not
+                  overrideImageSrc = set === 'haetae_01'
+                    ? asset(`${base}/2foot/short/tpose/haetae_character_2foot_short_t_${setNum}.png`)
+                    : asset(`${base}/2foot/short/haetae_character_2foot_short_t_${setNum}.png`);
+                } else {
+                  overrideImageSrc = asset(`${base}/2foot/short/haetae_character_2foot_short_${setNum}.png`);
+                }
+              } else if (characterType === '2-tall') {
+                if (pose === 't') {
+                  // haetae_01 uses 'tpose' subfolder, haetae_02 does not
+                  overrideImageSrc = set === 'haetae_01'
+                    ? asset(`${base}/2foot/tall/tpose/haetae_character_2foot_tall_t_${setNum}.png`)
+                    : asset(`${base}/2foot/tall/haetae_character_2foot_tall_t_${setNum}.png`);
+                } else {
+                  overrideImageSrc = asset(`${base}/2foot/tall/haetae_character_2foot_tall_${setNum}.png`);
+                }
+              } else {
+                // default to 4foot
+                overrideImageSrc = asset(`${base}/4foot/haetae_character_4foot_${setNum}.png`);
+              }
+            }
+
+            // Haetae keep tab with missing style folders -> keep previous image
+              if ((selectedCharacterLabel === '해태') && tab === 'keep') {
+                // 현재 이미지 경로에서 세트(haetae_01/haetae_02) 추출
+                const currentSrc = selected2dDetailItem?.imageSrc || displayedGeneratedImage?.imageSrc || '';
+                const set: 'haetae_01' | 'haetae_02' = currentSrc.includes('/haetae_02/') ? 'haetae_02' : 'haetae_01';
+                const styleId = chosenStyleId || selectedStyle;
+                const styleSuffix = (styleId && (styleIdToFolderSuffix as any)[styleId]) || 'basic';
+                const setNum = set === 'haetae_01' ? '01' : '02';
+                if (styleSuffix === 'basic') {
+                  // 기본 스타일은 -1 파일 사용
+                  overrideImageSrc = asset(`assets/generated/haetae/${set}/haetae_basic/haetae_basic_${setNum}-1.png`);
+                } else if (styleSuffix === 'clay') {
+                  // 클레이는 _01/_02 단일 파일
+                  overrideImageSrc = asset(`assets/generated/haetae/${set}/haetae_clay/haetae_clay_${setNum}.png`);
+                } else {
+                  // 다른 스타일은 아직 자산이 없을 수 있으므로 기존 이미지 유지(무효 변경 방지)
+                  overrideImageSrc = currentSrc || overrideImageSrc;
+                }
+              }
+
+            handleApplyEdit(
+              { character: selectedCharacter, style: chosenStyleId, prompt: fullPrompt },
+              {
+                character: selectedCharacterLabel || '-',
+                style: botariStyles.find((opt) => opt.id === selectedStyle)?.label || '-',
+                prompt: displayedGeneratedImage?.prompt || '',
+                backgroundEnabled: true,
+                poseLabel: '기본',
+                imageSrc: displayedGeneratedImage?.imageSrc,
+              },
+              overrideImageSrc,
+            );
             // 제출 후에도 편집 바는 계속 열린 상태 유지
             setIsImageEditBarOpen(true);
           }}
@@ -412,16 +567,26 @@ export default function App() {
               onClose={handleToggleHistoryGallery}
               onSelectItem={handleSelectHistoryItem}
               isOpen={isHistoryGalleryOpen}
+              modelUrl={computedModelGlbUrl}
             />
           ) : (
             <>
-              <div className="workspace-grid">
+              <div
+                className={`workspace-grid${
+                  !(
+                    generationStatus === 'loading' || assetGenerationStatus === 'loading'
+                  ) && (displayedGeneratedImage || isSelectedThreeDAsset)
+                    ? ' is-generated'
+                    : ''
+                }`}
+              >
                 {generationStatus === 'loading' ? (
                   <GeneratedImageLoadingPanel title="2D 이미지" />
                 ) : displayedGeneratedImage ? (
                   <GeneratedImagePanel
                     title={selected2dDetailItem?.kind ?? '2D 이미지'}
                     imageSrc={displayedGeneratedImage.imageSrc}
+                    fallbackImageSrc={selected2dHistoryItem?.imageSrc ?? latest2dHistoryItem?.imageSrc ?? undefined}
                     prompt={displayedGeneratedImage.prompt}
                     metadataItems={displayedGeneratedImage.metadataItems}
                     onAction={(action) => {
@@ -433,7 +598,7 @@ export default function App() {
                     onToggleEditBar={() => setIsImageEditBarOpen((v) => !v)}
                     allowSecondaryEdit={Boolean(selected2dDetailItem)}
                     isPoseApplied={selected2dDetailItem?.variant === 'pose'}
-                    initialBackgroundElementsEnabled={selected2dDetailItem?.variant === 'background-off' ? false : true}
+                    initialBackgroundElementsEnabled={selected2dDetailItem?.variant !== 'background-off'}
                   />
                 ) : (
                   <ResultPanel title="2D 이미지" emptyLabel="생성된 2D 이미지가 없습니다." onGenerateClick={handleEmptyStateGenerate} />
@@ -453,12 +618,12 @@ export default function App() {
                     onSkeletonChange={setIsSkeletonEnabled}
                     skeletonAvailable={isSkeletonAvailable}
                     onSkeletonSupportChange={setIsSkeletonAvailable}
-                    modelUrl={modelGlbUrl}
+                    modelUrl={computedModelGlbUrl}
                     referenceImageSrc={conversionPreviewImage?.imageSrc ?? asset('assets/icons/result-empty.svg')}
                     onAction={async (action) => {
                       if (action === 'download') {
                         setNotice('3D 에셋(.glb) 다운로드를 시작합니다.');
-                        await downloadFile(modelGlbUrl, 'botari-3d-asset.glb');
+                        await downloadFile(computedModelGlbUrl, 'botari-3d-asset.glb');
                         setNotice('3D 에셋 다운로드가 완료되었습니다.');
                       } else {
                         setNotice('3D 포맷 옵션이 선택되었습니다.');

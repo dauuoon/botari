@@ -1,4 +1,5 @@
 import { asset } from '../lib/asset';
+import ReactDOM from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { botariStyles, characterOptions } from '../data/botariData';
 import { CharacterSelector } from './CharacterSelector';
@@ -157,7 +158,7 @@ export function Sidebar({
         />
       </div>
 
-      <div className="sidebar-prompt-actions">
+      <div className={`sidebar-prompt-actions${composedPrefix ? ' has-prefix' : ''}`}>
         <div className="section-block section-block--prompt">
           <div className="section-header section-header--with-hint">
             <div className="section-title-row">
@@ -199,20 +200,25 @@ export function Sidebar({
           생성하기
         </button>
 
-        {isPromptModalOpen ? (
-          <div className="prompt-modal" role="dialog" aria-modal="true" aria-label="전체 프롬프트">
-            <div className="prompt-modal__backdrop" onClick={() => setPromptModalOpen(false)} />
-            <div className="prompt-modal__card">
-              <div className="prompt-modal__header">
-                <h3 className="prompt-modal__title">전체 프롬프트</h3>
-                <button type="button" className="prompt-modal__close" aria-label="닫기" onClick={() => setPromptModalOpen(false)}>✕</button>
-              </div>
-              <div className="prompt-modal__body">
-                <pre className="prompt-modal__text">{[prompt.trim(), promptPrefix.trim()].filter(Boolean).join('\n')}</pre>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {isPromptModalOpen
+          ? ReactDOM.createPortal(
+              (
+                <div className="prompt-modal" role="dialog" aria-modal="true" aria-label="전체 프롬프트">
+                  <div className="prompt-modal__backdrop" onClick={() => setPromptModalOpen(false)} />
+                  <div className="prompt-modal__card">
+                    <div className="prompt-modal__header">
+                      <h3 className="prompt-modal__title">전체 프롬프트</h3>
+                      <button type="button" className="prompt-modal__close" aria-label="닫기" onClick={() => setPromptModalOpen(false)}>✕</button>
+                    </div>
+                    <div className="prompt-modal__body">
+                      <pre className="prompt-modal__text">{[prompt.trim(), promptPrefix.trim()].filter(Boolean).join('\n')}</pre>
+                    </div>
+                  </div>
+                </div>
+              ),
+              document.body
+            )
+          : null}
       </div>
     </aside>
   );
