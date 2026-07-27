@@ -62,9 +62,23 @@ export function ThreeDAssetPanel({
       {hasAsset ? (
         <div className="result-panel-body result-panel-body--three-d">
           <div className="three-d-asset-stage">
-            <ThreeDAssetViewer ref={viewerRef} wireframe={wireframe} skeleton={skeleton} onSkeletonSupportChange={onSkeletonSupportChange} modelUrl={modelUrl} onMeshStats={({ polygonCount }) => setPolygonCount(polygonCount)} />
+            <ThreeDAssetViewer
+              ref={viewerRef}
+              wireframe={wireframe}
+              skeleton={skeleton}
+              onSkeletonSupportChange={onSkeletonSupportChange}
+              modelUrl={modelUrl}
+              onMeshStats={({ polygonCount }) => setPolygonCount(polygonCount)}
+            />
             {isAutoRigging ? (
-              <div className="three-d-asset-stage__loading" role="status" aria-live="polite">자동 리깅 중…</div>
+              <div className="three-d-asset-stage__loading" role="status" aria-live="polite">
+                <div className="three-d-asset-stage__loading-inner">
+                  <div className="three-d-asset-stage__loading-text">자동 리깅 중…</div>
+                  <div className="three-d-asset-stage__loading-bar" aria-hidden="true">
+                    <span className="three-d-asset-stage__loading-bar-fill" />
+                  </div>
+                </div>
+              </div>
             ) : null}
             <div className="three-d-asset-stage__wireframe three-d-asset-stage__wireframe--secondary">
               <span className="three-d-asset-stage__wireframe-label">Wireframe</span>
@@ -78,24 +92,26 @@ export function ThreeDAssetPanel({
                 <span className="three-d-asset-stage__wireframe-thumb" aria-hidden="true" />
               </button>
             </div>
-            <div className="three-d-asset-stage__wireframe">
-              <span className="three-d-asset-stage__wireframe-label">Skeleton</span>
-              <button
-                type="button"
-                className="three-d-asset-stage__wireframe-switch auto-rigging-button"
-                aria-label="자동리깅 수행"
-                onClick={() => {
-                  if (isAutoRigging || skeleton) return;
-                  setIsAutoRigging(true);
-                  window.setTimeout(() => {
-                    setIsAutoRigging(false);
-                    onSkeletonChange(true);
-                  }, 5000);
-                }}
-              >
-                <span className="auto-rigging-label">자동리깅</span>
-              </button>
-            </div>
+            {/* 중앙 CTA: 자동 리깅 */}
+            {!skeleton && !isAutoRigging ? (
+              <div className="three-d-asset-stage__rigging-cta">
+                <button
+                  type="button"
+                  className="auto-rigging-button auto-rigging-button--large"
+                  aria-label="자동 리깅 수행"
+                  onClick={() => {
+                    if (isAutoRigging || skeleton) return;
+                    setIsAutoRigging(true);
+                    window.setTimeout(() => {
+                      setIsAutoRigging(false);
+                      onSkeletonChange(true);
+                    }, 20000);
+                  }}
+                >
+                  <span className="auto-rigging-label">자동 리깅</span>
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div className="three-d-asset-footer">

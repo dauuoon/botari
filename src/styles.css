@@ -1664,6 +1664,13 @@ textarea:focus-visible {
   background: #8ec9eb; /* match toggle ON fill */
   color: #0b0d0f;      /* black label inside */
 }
+.auto-rigging-button--large {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 14px;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+}
 .auto-rigging-button:hover {
   background: #7fc1e6;
 }
@@ -1674,12 +1681,58 @@ textarea:focus-visible {
   inset: 0;
   background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(1px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   color: rgba(255, 255, 255, 0.95);
   font-size: 12px;
   letter-spacing: -0.01em;
+}
+
+.three-d-asset-stage__loading-inner {
+  width: min(520px, 86%);
+  display: grid;
+  gap: 10px;
+}
+
+.three-d-asset-stage__loading-text {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.three-d-asset-stage__loading-bar {
+  height: 6px;
+  width: 100%;
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.three-d-asset-stage__loading-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #6db5df, #8ec9eb);
+  border-radius: 999px;
+  animation: rigging-progress 20s linear forwards;
+}
+
+@keyframes rigging-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* Centered CTA container for auto-rigging */
+.three-d-asset-stage__rigging-cta {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.three-d-asset-stage__rigging-cta .auto-rigging-button {
+  pointer-events: auto;
 }
 
 /* Nudge auto-rigging text 2px downward */
