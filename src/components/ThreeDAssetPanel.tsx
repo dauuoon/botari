@@ -49,6 +49,7 @@ export function ThreeDAssetPanel({
   const hasPreviewThumbnail = referenceImageSrc !== asset('assets/icons/result-empty.svg');
   const [polygonCount, setPolygonCount] = useState<number | null>(null);
   const [isAutoRigging, setIsAutoRigging] = useState(false);
+  const isRiggingDisabled = isAutoRigging || skeleton || !skeletonAvailable;
 
   return (
     <section className="result-panel result-panel--three-d">
@@ -73,7 +74,7 @@ export function ThreeDAssetPanel({
             {isAutoRigging ? (
               <div className="three-d-asset-stage__loading" role="status" aria-live="polite">
                 <div className="three-d-asset-stage__loading-inner">
-                  <div className="three-d-asset-stage__loading-text">자동 리깅 중…</div>
+                  <div className="three-d-asset-stage__loading-text">···자동 리깅 중···</div>
                   <div className="three-d-asset-stage__loading-bar" aria-hidden="true">
                     <span className="three-d-asset-stage__loading-bar-fill" />
                   </div>
@@ -93,14 +94,16 @@ export function ThreeDAssetPanel({
               </button>
             </div>
             {/* 중앙 CTA: 자동 리깅 */}
-            {!skeleton && !isAutoRigging ? (
+            {!skeleton ? (
               <div className="three-d-asset-stage__rigging-cta">
                 <button
                   type="button"
-                  className="auto-rigging-button auto-rigging-button--large"
-                  aria-label="자동 리깅 수행"
+                  className={`auto-rigging-button auto-rigging-button--large${isRiggingDisabled ? ' is-disabled' : ''}`}
+                  aria-label={isRiggingDisabled ? '자동 리깅 (비활성화)' : '자동 리깅 수행'}
+                  aria-disabled={isRiggingDisabled}
+                  title={!skeletonAvailable ? '스켈레톤 미지원 모델입니다' : undefined}
                   onClick={() => {
-                    if (isAutoRigging || skeleton) return;
+                    if (isRiggingDisabled) return;
                     setIsAutoRigging(true);
                     window.setTimeout(() => {
                       setIsAutoRigging(false);
@@ -108,6 +111,7 @@ export function ThreeDAssetPanel({
                     }, 20000);
                   }}
                 >
+                  <span className="material-symbols-outlined auto-rigging-icon" aria-hidden="true">polyline</span>
                   <span className="auto-rigging-label">자동 리깅</span>
                 </button>
               </div>

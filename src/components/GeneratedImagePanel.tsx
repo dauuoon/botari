@@ -71,7 +71,7 @@ export function GeneratedImagePanel({
     prompt: currentPrompt,
   });
 
-  const beginRefinement = (onComplete: () => void) => {
+  const beginRefinement = (onComplete: () => void, delayMs: number = REFINE_DELAY_MS) => {
     if (refinementTimerRef.current) {
       window.clearTimeout(refinementTimerRef.current);
     }
@@ -81,14 +81,15 @@ export function GeneratedImagePanel({
     refinementTimerRef.current = window.setTimeout(() => {
       setIsRefining(false);
       onComplete();
-    }, REFINE_DELAY_MS);
+    }, delayMs);
   };
 
   // const handleOpenEditMode = (mode: EditMode) => {};
 
   const handleApplyEdit = (values: EditValues) => {
     const snapshot = buildSnapshot();
-    beginRefinement(() => onApplyEdit(values, snapshot));
+    // 편집(수정하기)일 때 로딩 시간을 5초 추가
+    beginRefinement(() => onApplyEdit(values, snapshot), REFINE_DELAY_MS + 5000);
   };
 
   const toggleBackgroundElements = () => {

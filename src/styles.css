@@ -1603,8 +1603,7 @@ textarea:focus-visible {
 .three-d-asset-stage__wireframe {
   position: absolute;
   right: 14px;
-  bottom: 14px;
-  margin-bottom: 5px;
+  bottom: -10px; /* move 10px further down */
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1612,7 +1611,7 @@ textarea:focus-visible {
   border-radius: 999px;
 }
 .three-d-asset-stage__wireframe--secondary {
-  bottom: 48px; /* position second control above the first */
+  bottom: 24px; /* keep ~34px gap above primary while lower overall */
 }
 
 .three-d-asset-stage__wireframe-label {
@@ -1657,19 +1656,45 @@ textarea:focus-visible {
   min-width: 40px;
   height: 22px;
   padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
   white-space: nowrap;
   font-size: 11px;
   font-weight: 700;
   background: #8ec9eb; /* match toggle ON fill */
-  color: #0b0d0f;      /* black label inside */
+  color: #000;         /* black label inside */
 }
 .auto-rigging-button--large {
-  height: 44px;
-  padding: 0 22px;
-  font-size: 14px;
+  height: 40px;            /* increased by 2px from 38px */
+  padding: 0 16px;         /* match 2D size */
+  width: 128px;            /* requested fixed width */
+  box-sizing: border-box;  /* include padding/border in 128px */
+  font-size: 14px;         /* match 2D label size */
+  font-weight: 800;        /* match 2D label weight */
   border-radius: 999px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+  border: 2px solid #ffffff; /* match 2D white outline */
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(0,0,0,0.04);
+  position: relative;       /* for shine effect */
+  overflow: hidden;         /* clip shine */
+}
+.auto-rigging-button--large::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.24) 46%, transparent 56%, transparent 100%);
+  transform: translateX(-140%);
+  animation: generateShine 2.8s linear infinite; /* same shine as 2D */
+  pointer-events: none;
+}
+.auto-rigging-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px; /* align with 2D floating edit icon */
+  line-height: 1;
+  color: currentColor; /* inherit black from button */
 }
 .auto-rigging-button:hover {
   background: #7fc1e6;
@@ -1679,8 +1704,8 @@ textarea:focus-visible {
 .three-d-asset-stage__loading {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(1px);
+  background: rgba(0, 0, 0, 0.6); /* darker backdrop */
+  backdrop-filter: blur(3px);     /* stronger blur */
   display: grid;
   place-items: center;
   color: rgba(255, 255, 255, 0.95);
@@ -1698,12 +1723,20 @@ textarea:focus-visible {
   text-align: center;
   font-size: 13px;
   font-weight: 600;
+  /* apply gradient shimmer like other loading text */
+  color: transparent;
+  background: var(--linear);
+  background-size: 240% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: loadingTextGradient 4.8s ease-in-out infinite;
 }
 
 .three-d-asset-stage__loading-bar {
-  height: 6px;
+  height: 11px; /* increased by 5px */
   width: 100%;
-  background: rgba(255,255,255,0.18);
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1712,14 +1745,41 @@ textarea:focus-visible {
   display: block;
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #6db5df, #8ec9eb);
+  background: var(--linear);
   border-radius: 999px;
-  animation: rigging-progress 20s linear forwards;
+  animation: rigging-progress-irregular 20s linear forwards;
 }
 
-@keyframes rigging-progress {
-  from { width: 0%; }
-  to { width: 100%; }
+.auto-rigging-button.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(10%);
+}
+.auto-rigging-button.is-disabled:hover {
+  background: #8ec9eb;
+  transform: none;
+}
+
+/* Irregular progress: quick bursts, stalls, and catches up by 100% */
+@keyframes rigging-progress-irregular {
+  0% { width: 0%; }
+  4% { width: 10%; }
+  8% { width: 12%; }
+  12% { width: 22%; }
+  18% { width: 25%; }
+  25% { width: 35%; }
+  32% { width: 37%; }
+  40% { width: 50%; }
+  46% { width: 52%; }
+  52% { width: 58%; }
+  60% { width: 63%; }
+  68% { width: 70%; }
+  72% { width: 72%; }
+  78% { width: 80%; }
+  85% { width: 83%; }
+  90% { width: 91%; }
+  96% { width: 97%; }
+  100% { width: 100%; }
 }
 
 /* Centered CTA container for auto-rigging */
@@ -1727,8 +1787,9 @@ textarea:focus-visible {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;   /* vertical: bottom */
+  justify-content: center; /* horizontal: center */
+  padding-bottom: 20px;    /* match 2D edit button baseline */
   pointer-events: none;
 }
 .three-d-asset-stage__rigging-cta .auto-rigging-button {

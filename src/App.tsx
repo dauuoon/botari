@@ -420,19 +420,68 @@ export default function App() {
     const isPromptChanged = Boolean(values.prompt && values.prompt.trim() && values.prompt !== snapshot.prompt);
     const nextVariant: HistoryItem['variant'] = isPromptChanged ? 'edit-prompt' : 'edit';
 
-    pushGeneratedHistoryItem(
-      {
-        character: nextCharacter,
-        style: nextStyle,
-        prompt: nextPrompt,
-        backgroundEnabled: snapshot.backgroundEnabled,
-        poseLabel: snapshot.poseLabel,
-        sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
-      },
-      nextVariant,
-      overrideImageSrc,
+    // 최종 썸네일/히스토리는 이미지가 실제로 로드된 후에만 반영되도록 지연
+    const effectiveSrc = (
+      overrideImageSrc
+      || resolveGeneratedImageUrl(nextCharacter, nextStyle, { sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet })
+      || snapshot.imageSrc
+      || asset('assets/generated/2d-completed.jpg')
     );
-    setNotice('2차 편집이 적용되었습니다.');
+
+    try {
+      const img = new Image();
+      img.onload = () => {
+        // 일부러 노출을 지연: 썸네일/3D 변환쪽 프리뷰가 약간 늦게 뜨도록
+        const THUMBNAIL_REVEAL_DELAY_MS = 1000;
+        window.setTimeout(() => {
+          pushGeneratedHistoryItem(
+            {
+              character: nextCharacter,
+              style: nextStyle,
+              prompt: nextPrompt,
+              backgroundEnabled: snapshot.backgroundEnabled,
+              poseLabel: snapshot.poseLabel,
+              sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
+            },
+            nextVariant,
+            effectiveSrc,
+          );
+          setNotice('2차 편집이 적용되었습니다.');
+        }, THUMBNAIL_REVEAL_DELAY_MS);
+      };
+      img.onerror = () => {
+        // 로드 실패 시에도 이전 이미지로 안전하게 반영
+        pushGeneratedHistoryItem(
+          {
+            character: nextCharacter,
+            style: nextStyle,
+            prompt: nextPrompt,
+            backgroundEnabled: snapshot.backgroundEnabled,
+            poseLabel: snapshot.poseLabel,
+            sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
+          },
+          nextVariant,
+          snapshot.imageSrc || effectiveSrc,
+        );
+        setNotice('이미지 로드에 실패하여 이전 이미지를 유지했습니다.');
+      };
+      img.src = effectiveSrc || '';
+    } catch {
+      // 예외 시 즉시 이전 이미지를 사용
+      pushGeneratedHistoryItem(
+        {
+          character: nextCharacter,
+          style: nextStyle,
+          prompt: nextPrompt,
+          backgroundEnabled: snapshot.backgroundEnabled,
+          poseLabel: snapshot.poseLabel,
+          sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
+        },
+        nextVariant,
+        snapshot.imageSrc,
+      );
+      setNotice('이미지 적용 중 오류가 발생하여 이전 이미지를 사용했습니다.');
+    }
   };
 
   useEffect(() => {
