@@ -138,23 +138,37 @@ export function Sidebar({
         />
       </div>
 
+      {/* 1) 메인 스타일: 전통민화만 노출 */}
+      <div className="section-block">
+        <div className="section-header">
+          <div className="section-title-row">
+            <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
+            <h2 className="section-title">전통민화 <span className="section-asterisk">*</span></h2>
+          </div>
+        </div>
+        <StyleSelector
+          options={botariStyles.filter((s) => s.id === 'traditional')}
+          selectedValue={selectedStyle}
+          onSelect={onStyleSelect}
+        />
+      </div>
+
+      {/* 2) 하위 분류: 나머지 스타일 비활성(그레이) 표시 */}
       <div className="section-block">
         <div className="section-header section-header--with-hint">
           <div className="section-title-row">
             <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
-            <h2 className="section-title">스타일 <span className="section-asterisk">*</span></h2>
+            <h2 className="section-title">스타일</h2>
           </div>
-          {isStyleLocked ? (
-            <span className="section-hint section-hint--warning">전통민화를 먼저 생성 후 스타일을 사용할 수 있습니다.</span>
-          ) : null}
+          <span className="section-hint section-hint--warning">2차 편집에서 사용 가능합니다.</span>
         </div>
         <StyleSelector
-          options={botariStyles}
-          selectedValue={selectedStyle}
-          onSelect={onStyleSelect}
-          locked={isStyleLocked}
-          allowedId="traditional"
-          lockedMessage="전통민화를 먼저 생성 후 스타일을 사용할 수 있습니다."
+          options={botariStyles.filter((s) => s.id !== 'traditional')}
+          selectedValue={''}
+          onSelect={() => { /* no-op when locked */ }}
+          locked={true}
+          allowedId="traditional" /* 모든 항목을 잠그기 위해 존재하지 않는 id로 비교 */
+          lockedMessage="2차 편집에서 사용 가능합니다."
         />
       </div>
 

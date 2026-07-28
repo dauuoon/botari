@@ -104,6 +104,7 @@ export default function App() {
   const [assetGenerationStatus, setAssetGenerationStatus] = useState<AssetGenerationStatus>('idle');
   const [isSkeletonAvailable, setIsSkeletonAvailable] = useState<boolean>(true);
   const [isImageEditBarOpen, setIsImageEditBarOpen] = useState(false);
+  const [isEditRefining, setIsEditRefining] = useState(false);
   const [lastTigerSourceSet, setLastTigerSourceSet] = useState<'tiger_01' | 'tiger_03' | null>(null);
   const [haetaeSeqIndex, setHaetaeSeqIndex] = useState(0);
   const [haetaeNextFollowUpSet, setHaetaeNextFollowUpSet] = useState<'haetae_01' | 'haetae_02' | null>(null);
@@ -344,7 +345,7 @@ export default function App() {
         metadataItems: selected2dDetailItem.metadataItems,
       }
     : generatedImage;
-  const conversionPreviewImage = generationStatus === 'loading' ? null : selected2dHistoryItem ?? latest2dHistoryItem;
+  const conversionPreviewImage = (generationStatus === 'loading' || isEditRefining) ? null : (selected2dHistoryItem ?? latest2dHistoryItem);
   const canConvertTo3D = Boolean(latest2dHistoryItem) && generationStatus !== 'loading' && assetGenerationStatus !== 'loading';
   const isSelectedThreeDAsset = selectedHistoryItem?.kind === '3D 에셋';
   const computedModelGlbUrl = useMemo(() => {
@@ -432,7 +433,7 @@ export default function App() {
       const img = new Image();
       img.onload = () => {
         // 일부러 노출을 지연: 썸네일/3D 변환쪽 프리뷰가 약간 늦게 뜨도록
-        const THUMBNAIL_REVEAL_DELAY_MS = 1000;
+        const THUMBNAIL_REVEAL_DELAY_MS = 3000; // 기존 1초에서 +2초 지연
         window.setTimeout(() => {
           pushGeneratedHistoryItem(
             {
@@ -648,6 +649,7 @@ export default function App() {
                     allowSecondaryEdit={Boolean(selected2dDetailItem)}
                     isPoseApplied={selected2dDetailItem?.variant === 'pose'}
                     initialBackgroundElementsEnabled={selected2dDetailItem?.variant !== 'background-off'}
+                    onRefineStatusChange={setIsEditRefining}
                   />
                 ) : (
                   <ResultPanel title="2D 이미지" emptyLabel="생성된 2D 이미지가 없습니다." onGenerateClick={handleEmptyStateGenerate} />
@@ -700,7 +702,13 @@ export default function App() {
                         }}
                         aria-label={`${item.kind} 선택`}
                       >
-                        <img src={item.thumbnail} alt="" aria-hidden="true" className={`history-thumb history-thumb--${item.variant}`} />
+                        <img
+                          src={item.thumbnail}
+                          alt=""
+                          aria-hidden="true"
+                          className={`history-thumb history-thumb--${item.variant}`}
+                          style={isEditRefining && item.variant === 'base' ? { visibility: 'hidden' } : undefined}
+                        />
                       </button>
                     ))}
                   </div>

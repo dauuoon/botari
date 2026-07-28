@@ -891,7 +891,17 @@ textarea:focus-visible {
 
 .style-tile[aria-disabled="true"] {
   cursor: not-allowed;
-  opacity: 0.8; /* slightly less dim when locked */
+  opacity: 0.8; /* slightly dim when locked */
+}
+
+/* Make disabled style tiles clearly grayscale */
+.style-tile[aria-disabled="true"] .style-tile-image {
+  filter: grayscale(100%) saturate(0) brightness(0.82);
+}
+
+/* Prevent hover brightening on disabled tiles */
+.style-tile[aria-disabled="true"]:hover {
+  opacity: 0.8;
 }
 
 .style-tile-image {

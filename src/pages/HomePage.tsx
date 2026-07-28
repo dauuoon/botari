@@ -4,8 +4,6 @@ import { Header } from '../components/Header';
 import { AutoScrollImageSlider } from '../components';
 
 export default function HomePage() {
-  // 고정 노출 요구사항에 따라 총 장수를 523으로 표시
-  const TOTAL_COUNT = 523;
   return (
     <div className="app-shell">
       <Header />
@@ -21,9 +19,7 @@ export default function HomePage() {
           <div className="landing-headline" aria-label="타이틀">
             <div className="landing-symbol" aria-hidden="true" />
             <h1 className="landing-title">
-              <span className="landing-title-line landing-title-strong">
-                <span className="landing-title-count">총 {TOTAL_COUNT}장</span> 한국의 아름다움을 그려내다
-              </span>
+              <span className="landing-title-line landing-title-strong">한국의 아름다움을 그려내다</span>
               <span className="landing-title-line landing-title-light">한국 전통민화 이미지 생성 AI</span>
             </h1>
             <div className="landing-cta-wrap" aria-label="생성 바로가기">

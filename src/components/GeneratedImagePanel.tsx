@@ -28,6 +28,7 @@ type GeneratedImagePanelProps = {
   allowSecondaryEdit?: boolean;
   isPoseApplied?: boolean;
   initialBackgroundElementsEnabled?: boolean;
+  onRefineStatusChange?: (isRefining: boolean) => void;
 };
 
 const REFINE_DELAY_MS = 2600;
@@ -48,6 +49,7 @@ export function GeneratedImagePanel({
   allowSecondaryEdit = true,
   isPoseApplied = false,
   initialBackgroundElementsEnabled = true,
+  onRefineStatusChange,
 }: GeneratedImagePanelProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
@@ -77,9 +79,11 @@ export function GeneratedImagePanel({
     }
 
     setIsRefining(true);
+    if (onRefineStatusChange) onRefineStatusChange(true);
 
     refinementTimerRef.current = window.setTimeout(() => {
       setIsRefining(false);
+      if (onRefineStatusChange) onRefineStatusChange(false);
       onComplete();
     }, delayMs);
   };
