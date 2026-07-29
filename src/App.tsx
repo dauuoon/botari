@@ -7,7 +7,6 @@ import { ThreeDAssetPanel } from './components/ThreeDAssetPanel';
 import type { ThreeDAssetViewerHandle } from './components/ThreeDAssetViewer';
 import { Sidebar } from './components/Sidebar';
 import { ResultPanel } from './components/ResultPanel';
-import { ImageEditBar } from './components/ImageEditBar';
 import { botariStyles, characterOptions } from './data/botariData';
 import type { EditValues } from './components/GeneratedImageEditModal';
 import { asset } from './lib/asset';
@@ -103,13 +102,16 @@ export default function App() {
   const [isSkeletonEnabled, setIsSkeletonEnabled] = useState(false);
   const [assetGenerationStatus, setAssetGenerationStatus] = useState<AssetGenerationStatus>('idle');
   const [isSkeletonAvailable, setIsSkeletonAvailable] = useState<boolean>(true);
-  const [isImageEditBarOpen, setIsImageEditBarOpen] = useState(false);
+  const [isSidebarEditMode, setIsSidebarEditMode] = useState(false);
+  const [editActiveTab, setEditActiveTab] = useState<'keep' | 'character'>('keep');
   const [isEditRefining, setIsEditRefining] = useState(false);
   const [lastTigerSourceSet, setLastTigerSourceSet] = useState<'tiger_01' | 'tiger_03' | null>(null);
   const [haetaeSeqIndex, setHaetaeSeqIndex] = useState(0);
   const [haetaeNextFollowUpSet, setHaetaeNextFollowUpSet] = useState<'haetae_01' | 'haetae_02' | null>(null);
   const generationTimerRef = useRef<number | null>(null);
   const assetGenerationTimerRef = useRef<number | null>(null);
+  const editImageTimerRef = useRef<number | null>(null);
+  const editHistoryTimerRef = useRef<number | null>(null);
   const historyIdRef = useRef(1);
   const threeDViewerRef = useRef<ThreeDAssetViewerHandle | null>(null);
   const defaultModelGlbUrl = asset('assets/generated/duck-example.glb');
@@ -409,6 +411,23 @@ export default function App() {
   };
 
   const handleApplyEdit = (values: EditValues, snapshot: EditableImageState, overrideImageSrc?: string) => {
+    // Show loading panel immediately
+    setGenerationStatus('loading');
+    setNotice('이미지 수정 중입니다. 잠시만 기다려 주세요.');
+    setSelectedHistoryId(null);
+
+    if (editImageTimerRef.current) {
+      window.clearTimeout(editImageTimerRef.current);
+      editImageTimerRef.current = null;
+    }
+    if (editHistoryTimerRef.current) {
+      window.clearTimeout(editHistoryTimerRef.current);
+      editHistoryTimerRef.current = null;
+    }
+
+    const MIN_EDIT_LOADING_MS = 5000;
+    const editStartAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
     const nextCharacter = values.character
       ? characterOptions.find((opt) => opt.value === values.character)?.label || snapshot.character
       : snapshot.character;
@@ -417,11 +436,9 @@ export default function App() {
       : snapshot.style;
     const nextPrompt = values.prompt || snapshot.prompt;
 
-    // 프롬프트가 변경되었으면 edit-prompt 이미지 사용
     const isPromptChanged = Boolean(values.prompt && values.prompt.trim() && values.prompt !== snapshot.prompt);
     const nextVariant: HistoryItem['variant'] = isPromptChanged ? 'edit-prompt' : 'edit';
 
-    // 최종 썸네일/히스토리는 이미지가 실제로 로드된 후에만 반영되도록 지연
     const effectiveSrc = (
       overrideImageSrc
       || resolveGeneratedImageUrl(nextCharacter, nextStyle, { sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet })
@@ -429,12 +446,45 @@ export default function App() {
       || asset('assets/generated/2d-completed.jpg')
     );
 
+    const HISTORY_REVEAL_DELAY_MS = 3000;
+
     try {
-      const img = new Image();
-      img.onload = () => {
-        // 일부러 노출을 지연: 썸네일/3D 변환쪽 프리뷰가 약간 늦게 뜨도록
-        const THUMBNAIL_REVEAL_DELAY_MS = 3000; // 기존 1초에서 +2초 지연
-        window.setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.log('[Timing][Edit] before img load at', (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+    } catch {}
+
+    const img = new Image();
+    img.onload = () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.log('[Timing][Edit] img.onload at', (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+      } catch {}
+
+      const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const elapsed = now - editStartAt;
+      const remain = Math.max(0, MIN_EDIT_LOADING_MS - elapsed);
+
+      editImageTimerRef.current = window.setTimeout(() => {
+        setGeneratedImage({
+          imageSrc: effectiveSrc,
+          prompt: nextPrompt,
+          metadataItems: buildMetadataItems({
+            character: nextCharacter,
+            style: nextStyle,
+            prompt: nextPrompt,
+            backgroundEnabled: snapshot.backgroundEnabled,
+            poseLabel: snapshot.poseLabel,
+            sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
+          }),
+        });
+        setGenerationStatus('generated');
+        setIsEditRefining(false);
+
+        editHistoryTimerRef.current = window.setTimeout(() => {
+          try {
+            // eslint-disable-next-line no-console
+            console.log('[Timing][Edit] push history at', (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+          } catch {}
           pushGeneratedHistoryItem(
             {
               character: nextCharacter,
@@ -448,41 +498,46 @@ export default function App() {
             effectiveSrc,
           );
           setNotice('2차 편집이 적용되었습니다.');
-        }, THUMBNAIL_REVEAL_DELAY_MS);
-      };
-      img.onerror = () => {
-        // 로드 실패 시에도 이전 이미지로 안전하게 반영
-        pushGeneratedHistoryItem(
-          {
-            character: nextCharacter,
-            style: nextStyle,
-            prompt: nextPrompt,
-            backgroundEnabled: snapshot.backgroundEnabled,
-            poseLabel: snapshot.poseLabel,
-            sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
-          },
-          nextVariant,
-          snapshot.imageSrc || effectiveSrc,
-        );
-        setNotice('이미지 로드에 실패하여 이전 이미지를 유지했습니다.');
-      };
-      img.src = effectiveSrc || '';
-    } catch {
-      // 예외 시 즉시 이전 이미지를 사용
-      pushGeneratedHistoryItem(
-        {
-          character: nextCharacter,
-          style: nextStyle,
-          prompt: nextPrompt,
-          backgroundEnabled: snapshot.backgroundEnabled,
-          poseLabel: snapshot.poseLabel,
-          sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
-        },
-        nextVariant,
-        snapshot.imageSrc,
-      );
-      setNotice('이미지 적용 중 오류가 발생하여 이전 이미지를 사용했습니다.');
-    }
+        }, HISTORY_REVEAL_DELAY_MS);
+      }, remain);
+    };
+
+    img.onerror = () => {
+      try {
+        // eslint-disable-next-line no-console
+        console.log('[Timing][Edit] img.onerror at', (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+      } catch {}
+
+      const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      const elapsed = now - editStartAt;
+      const remain = Math.max(0, MIN_EDIT_LOADING_MS - elapsed);
+
+      editImageTimerRef.current = window.setTimeout(() => {
+        setGenerationStatus('generated');
+        setIsEditRefining(false);
+        editHistoryTimerRef.current = window.setTimeout(() => {
+          try {
+            // eslint-disable-next-line no-console
+            console.log('[Timing][Edit] push history (error path) at', (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+          } catch {}
+          pushGeneratedHistoryItem(
+            {
+              character: nextCharacter,
+              style: nextStyle,
+              prompt: nextPrompt,
+              backgroundEnabled: snapshot.backgroundEnabled,
+              poseLabel: snapshot.poseLabel,
+              sourceSet: selected2dDetailItem?.sourceSet ?? snapshot.sourceSet,
+            },
+            nextVariant,
+            snapshot.imageSrc || effectiveSrc,
+          );
+          setNotice('이미지 로드에 실패하여 이전 이미지를 유지했습니다.');
+        }, HISTORY_REVEAL_DELAY_MS);
+      }, remain);
+    };
+
+    img.src = effectiveSrc || '';
   };
 
   useEffect(() => {
@@ -493,6 +548,12 @@ export default function App() {
       if (assetGenerationTimerRef.current) {
         window.clearTimeout(assetGenerationTimerRef.current);
       }
+      if (editImageTimerRef.current) {
+        window.clearTimeout(editImageTimerRef.current);
+      }
+      if (editHistoryTimerRef.current) {
+        window.clearTimeout(editHistoryTimerRef.current);
+      }
     };
   }, []);
 
@@ -500,87 +561,7 @@ export default function App() {
     <div className="app-shell">
       <Header />
       <main className="app-main">
-        <ImageEditBar
-          isOpen={isImageEditBarOpen}
-          onClose={() => setIsImageEditBarOpen(false)}
-          currentCharacterPromptTemplate={selectedCharacterPromptTemplate}
-          currentStyleId={selectedStyle}
-          onSubmit={({ tab, styleId, characterType, pose, userPrompt }) => {
-            const chosenStyleId = styleId || selectedStyle;
-            const stylePrompt = botariStyles.find((s) => s.id === chosenStyleId)?.promptTemplate || '';
-            const prefix = [selectedCharacterPromptTemplate, stylePrompt].filter(Boolean).join('\n');
-            const fullPrompt = [userPrompt.trim(), prefix.trim()].filter(Boolean).join('\n');
-
-            // Determine override image for special cases
-            let overrideImageSrc: string | undefined;
-            // Haetae characterization images: follow current set (01/02) and folder layout
-            if ((selectedCharacterLabel === '해태') && tab === 'character') {
-              const currentSrc = selected2dDetailItem?.imageSrc || displayedGeneratedImage?.imageSrc || '';
-              const set: 'haetae_01' | 'haetae_02' = currentSrc.includes('/haetae_02/') ? 'haetae_02' : 'haetae_01';
-              const setNum = set === 'haetae_01' ? '01' : '02';
-              const base = `assets/generated/haetae/${set}/haetae_character`;
-              if (characterType === '4') {
-                overrideImageSrc = asset(`${base}/4foot/haetae_character_4foot_${setNum}.png`);
-              } else if (characterType === '2-short') {
-                if (pose === 't') {
-                  // haetae_01 uses 'tpose' subfolder, haetae_02 does not
-                  overrideImageSrc = set === 'haetae_01'
-                    ? asset(`${base}/2foot/short/tpose/haetae_character_2foot_short_t_${setNum}.png`)
-                    : asset(`${base}/2foot/short/haetae_character_2foot_short_t_${setNum}.png`);
-                } else {
-                  overrideImageSrc = asset(`${base}/2foot/short/haetae_character_2foot_short_${setNum}.png`);
-                }
-              } else if (characterType === '2-tall') {
-                if (pose === 't') {
-                  // haetae_01 uses 'tpose' subfolder, haetae_02 does not
-                  overrideImageSrc = set === 'haetae_01'
-                    ? asset(`${base}/2foot/tall/tpose/haetae_character_2foot_tall_t_${setNum}.png`)
-                    : asset(`${base}/2foot/tall/haetae_character_2foot_tall_t_${setNum}.png`);
-                } else {
-                  overrideImageSrc = asset(`${base}/2foot/tall/haetae_character_2foot_tall_${setNum}.png`);
-                }
-              } else {
-                // default to 4foot
-                overrideImageSrc = asset(`${base}/4foot/haetae_character_4foot_${setNum}.png`);
-              }
-            }
-
-            // Haetae keep tab with missing style folders -> keep previous image
-              if ((selectedCharacterLabel === '해태') && tab === 'keep') {
-                // 현재 이미지 경로에서 세트(haetae_01/haetae_02) 추출
-                const currentSrc = selected2dDetailItem?.imageSrc || displayedGeneratedImage?.imageSrc || '';
-                const set: 'haetae_01' | 'haetae_02' = currentSrc.includes('/haetae_02/') ? 'haetae_02' : 'haetae_01';
-                const styleId = chosenStyleId || selectedStyle;
-                const styleSuffix = (styleId && (styleIdToFolderSuffix as any)[styleId]) || 'basic';
-                const setNum = set === 'haetae_01' ? '01' : '02';
-                if (styleSuffix === 'basic') {
-                  // 기본 스타일은 -1 파일 사용
-                  overrideImageSrc = asset(`assets/generated/haetae/${set}/haetae_basic/haetae_basic_${setNum}-1.png`);
-                } else if (styleSuffix === 'clay') {
-                  // 클레이는 _01/_02 단일 파일
-                  overrideImageSrc = asset(`assets/generated/haetae/${set}/haetae_clay/haetae_clay_${setNum}.png`);
-                } else {
-                  // 다른 스타일은 아직 자산이 없을 수 있으므로 기존 이미지 유지(무효 변경 방지)
-                  overrideImageSrc = currentSrc || overrideImageSrc;
-                }
-              }
-
-            handleApplyEdit(
-              { character: selectedCharacter, style: chosenStyleId, prompt: fullPrompt },
-              {
-                character: selectedCharacterLabel || '-',
-                style: botariStyles.find((opt) => opt.id === selectedStyle)?.label || '-',
-                prompt: displayedGeneratedImage?.prompt || '',
-                backgroundEnabled: true,
-                poseLabel: '기본',
-                imageSrc: displayedGeneratedImage?.imageSrc,
-              },
-              overrideImageSrc,
-            );
-            // 제출 후에도 편집 바는 계속 열린 상태 유지
-            setIsImageEditBarOpen(true);
-          }}
-        />
+        {/* ImageEditBar removed; using Sidebar edit mode */}
         <Sidebar
           promptPrefix={promptPrefix}
           prompt={prompt}
@@ -600,14 +581,87 @@ export default function App() {
           }}
           selectedStyle={selectedStyle}
           onStyleSelect={(value) => {
-            // Sidebar에서는 전통민화만 선택 가능(2차 편집에서만 다른 스타일 변경 가능)
-            if (value && value !== 'traditional') return;
-            setSelectedStyle(value);
+            if (!isSidebarEditMode) {
+              if (value && value !== 'traditional') return;
+              setSelectedStyle(value);
+            } else {
+              // edit mode: allow all except traditional
+              if (value === 'traditional') return;
+              setSelectedStyle(value);
+            }
           }}
           onGenerate={handleGenerate}
           canGenerate={Boolean(selectedCharacter && selectedStyle)}
-          // 사이드바는 항상 잠금: 전통민화만 활성화, 다른 스타일은 2차 편집 모달에서만 변경 가능
-          isStyleLocked={true}
+          isStyleLocked={!isSidebarEditMode}
+          mode={isSidebarEditMode ? 'edit' : 'generate'}
+          editActiveTab={editActiveTab}
+          onChangeEditTab={setEditActiveTab}
+          onExitEdit={() => setIsSidebarEditMode(false)}
+          onEditSubmit={({ tab, styleId, backgroundEnabled, userPrompt, characterType, pose }) => {
+            const chosenStyleId = styleId || selectedStyle;
+            const stylePrompt = botariStyles.find((s) => s.id === chosenStyleId)?.promptTemplate || '';
+            const prefix = [selectedCharacterPromptTemplate, stylePrompt].filter(Boolean).join('\n');
+            const fullPrompt = [userPrompt.trim(), prefix.trim()].filter(Boolean).join('\n');
+
+            let overrideImageSrc: string | undefined;
+            if ((selectedCharacterLabel === '해태') && tab === 'keep') {
+              const currentSrc = selected2dDetailItem?.imageSrc || displayedGeneratedImage?.imageSrc || '';
+              const set: 'haetae_01' | 'haetae_02' = currentSrc.includes('/haetae_02/') ? 'haetae_02' : 'haetae_01';
+              const styleIdLocal = chosenStyleId || selectedStyle;
+              const styleSuffix = (styleIdLocal && (styleIdToFolderSuffix as any)[styleIdLocal]) || 'basic';
+              const setNum = set === 'haetae_01' ? '01' : '02';
+              if (styleSuffix === 'basic') {
+                overrideImageSrc = asset(`assets/generated/haetae/${set}/haetae_basic/haetae_basic_${setNum}-1.png`);
+              } else if (styleSuffix === 'clay') {
+                overrideImageSrc = asset(`assets/generated/haetae/${set}/haetae_clay/haetae_clay_${setNum}.png`);
+              } else {
+                overrideImageSrc = currentSrc || overrideImageSrc;
+              }
+            }
+
+            if ((selectedCharacterLabel === '해태') && tab === 'character') {
+              const currentSrc = selected2dDetailItem?.imageSrc || displayedGeneratedImage?.imageSrc || '';
+              const set: 'haetae_01' | 'haetae_02' = currentSrc.includes('/haetae_02/') ? 'haetae_02' : 'haetae_01';
+              const setNum = set === 'haetae_01' ? '01' : '02';
+              const base = `assets/generated/haetae/${set}/haetae_character`;
+              const t = characterType || '4';
+              const p = pose || 'default';
+              if (t === '4') {
+                overrideImageSrc = asset(`${base}/4foot/haetae_character_4foot_${setNum}.png`);
+              } else if (t === '2-short') {
+                if (p === 't') {
+                  overrideImageSrc = set === 'haetae_01'
+                    ? asset(`${base}/2foot/short/tpose/haetae_character_2foot_short_t_${setNum}.png`)
+                    : asset(`${base}/2foot/short/haetae_character_2foot_short_t_${setNum}.png`);
+                } else {
+                  overrideImageSrc = asset(`${base}/2foot/short/haetae_character_2foot_short_${setNum}.png`);
+                }
+              } else if (t === '2-tall') {
+                if (p === 't') {
+                  overrideImageSrc = set === 'haetae_01'
+                    ? asset(`${base}/2foot/tall/tpose/haetae_character_2foot_tall_t_${setNum}.png`)
+                    : asset(`${base}/2foot/tall/haetae_character_2foot_tall_t_${setNum}.png`);
+                } else {
+                  overrideImageSrc = asset(`${base}/2foot/tall/haetae_character_2foot_tall_${setNum}.png`);
+                }
+              } else {
+                overrideImageSrc = asset(`${base}/4foot/haetae_character_4foot_${setNum}.png`);
+              }
+            }
+
+            handleApplyEdit(
+              { character: selectedCharacter, style: chosenStyleId, prompt: fullPrompt },
+              {
+                character: selectedCharacterLabel || '-',
+                style: botariStyles.find((opt) => opt.id === selectedStyle)?.label || '-',
+                prompt: displayedGeneratedImage?.prompt || '',
+                backgroundEnabled: backgroundEnabled,
+                poseLabel: '기본',
+                imageSrc: displayedGeneratedImage?.imageSrc,
+              },
+              overrideImageSrc,
+            );
+          }}
         />
         <section className="workspace" aria-label="이미지 생성 결과 영역">
           {isHistoryGalleryOpen ? (
@@ -645,7 +699,10 @@ export default function App() {
                     onApplyEdit={handleApplyEdit}
                     onGeneratePose={handleGeneratePose}
                     onToggleBackgroundElements={handleBackgroundElementsToggle}
-                    onToggleEditBar={() => setIsImageEditBarOpen((v) => !v)}
+                    onToggleEditBar={() => {
+                      setIsSidebarEditMode(true);
+                      setEditActiveTab('keep');
+                    }}
                     allowSecondaryEdit={Boolean(selected2dDetailItem)}
                     isPoseApplied={selected2dDetailItem?.variant === 'pose'}
                     initialBackgroundElementsEnabled={selected2dDetailItem?.variant !== 'background-off'}

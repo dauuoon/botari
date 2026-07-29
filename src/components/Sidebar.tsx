@@ -19,6 +19,12 @@ type SidebarProps = {
   onGenerate: () => void;
   canGenerate: boolean;
   isStyleLocked?: boolean;
+  // Edit mode extensions
+  mode?: 'generate' | 'edit';
+  editActiveTab?: 'keep' | 'character';
+  onChangeEditTab?: (tab: 'keep' | 'character') => void;
+  onEditSubmit?: (payload: { tab: 'keep' | 'character'; styleId?: string; backgroundEnabled: boolean; userPrompt: string; characterType?: '4' | '2-short' | '2-tall'; pose?: 't' | 'default' }) => void;
+  onExitEdit?: () => void;
 };
 
 export function Sidebar({
@@ -35,6 +41,11 @@ export function Sidebar({
   onGenerate,
   canGenerate,
   isStyleLocked = false,
+  mode = 'generate',
+  editActiveTab = 'keep',
+  onChangeEditTab,
+  onEditSubmit,
+  onExitEdit,
 }: SidebarProps) {
   const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [isPromptModalOpen, setPromptModalOpen] = useState(false);
@@ -117,8 +128,35 @@ export function Sidebar({
 
   // 단일 입력 -> 두 박스 분리로 단순화되어, 기존 오버레이/경계 제어 로직 제거
 
+  const [backgroundEnabled, setBackgroundEnabled] = useState<boolean>(true);
+
+  const isEdit = mode === 'edit';
+  const [editCharacterType, setEditCharacterType] = useState<'4' | '2-short' | '2-tall'>('4');
+  const [editCharacterPose, setEditCharacterPose] = useState<'default' | 't'>('default');
+
+  // 4족 선택 시 포즈는 자동으로 '포즈없음'으로 강제, T포즈 비활성화
+  useEffect(() => {
+    if (editCharacterType === '4' && editCharacterPose !== 'default') {
+      setEditCharacterPose('default');
+    }
+  }, [editCharacterType, editCharacterPose]);
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isEdit ? ' sidebar--edit' : ''}`}>
+      {isEdit ? (
+        <>
+          <div className="editbar-header">
+            <h2 className="editbar-title">이미지편집</h2>
+            <button type="button" className="editbar-close" aria-label="편집 닫기" onClick={() => onExitEdit?.()}>✕</button>
+          </div>
+          <div className="editbar-tablist" role="tablist" aria-label="편집 모드">
+            <button type="button" role="tab" aria-selected={editActiveTab === 'keep'} className={`editbar-tab${editActiveTab === 'keep' ? ' is-active' : ''}`} onClick={() => onChangeEditTab?.('keep')}>민화유지</button>
+            <button type="button" role="tab" aria-selected={editActiveTab === 'character'} className={`editbar-tab${editActiveTab === 'character' ? ' is-active' : ''}`} onClick={() => onChangeEditTab?.('character')}>캐릭터화</button>
+          </div>
+        </>
+      ) : null}
+
+      {/* 편집 모드에서 프롬프트는 하단 고정 영역로 이동 (CTA와 함께) */}
       <div className="section-block">
         <div className="section-header">
           <div className="section-title-row">
@@ -132,87 +170,238 @@ export function Sidebar({
           selectedLabel={selectedCharacterLabel}
           defaultLabel="생성 개체 선택"
           selectedThumbnail={selectedCharacterOption?.thumbnail ?? ''}
-          isOpen={isCharacterOpen}
-          onToggle={onCharacterToggle}
-          onSelect={onCharacterSelect}
+          isOpen={isEdit ? false : isCharacterOpen}
+          onToggle={isEdit ? () => {} : onCharacterToggle}
+          onSelect={isEdit ? () => {} : onCharacterSelect}
         />
       </div>
 
-      {/* 1) 메인 스타일: 전통민화만 노출 */}
+      {/* 1) 메인 스타일 헤더: generate=전통민화 선택, edit/keep=전통민화(그레이 비활성 타일), edit/character=캐릭터화(그레이 비활성 타일) */}
+      {(!isEdit || isEdit) ? (
       <div className="section-block">
         <div className="section-header">
           <div className="section-title-row">
             <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
-            <h2 className="section-title">전통민화 <span className="section-asterisk">*</span></h2>
+            {!isEdit ? (
+              <h2 className="section-title">전통민화 <span className="section-asterisk">*</span></h2>
+            ) : editActiveTab === 'keep' ? (
+              <h2 className="section-title">전통민화 <span className="section-asterisk">*</span></h2>
+            ) : (
+              <h2 className="section-title">캐릭터화 <span className="section-asterisk">*</span></h2>
+            )}
           </div>
         </div>
-        <StyleSelector
-          options={botariStyles.filter((s) => s.id === 'traditional')}
-          selectedValue={selectedStyle}
-          onSelect={onStyleSelect}
-        />
+        {!isEdit ? (
+          <StyleSelector
+            options={botariStyles.filter((s) => s.id === 'traditional')}
+            selectedValue={selectedStyle}
+            onSelect={onStyleSelect}
+            locked={false}
+          />
+        ) : editActiveTab === 'keep' ? (
+          <div className="style-grid">
+            <button type="button" className="style-tile tone-neutral" aria-disabled title="편집 모드에서는 전통민화 선택이 비활성화됩니다.">
+              <img src={botariStyles.find((s) => s.id === 'traditional')?.thumbnail || asset('assets/icons/style-disabled.svg')} alt="" aria-hidden="true" className="style-tile-image" />
+              <span className="style-tile-label">전통민화</span>
+            </button>
+          </div>
+        ) : (
+          <div className="style-grid">
+            <button type="button" className="style-tile tone-neutral" aria-disabled title="편집 모드에서 캐릭터화는 아직 선택할 수 없습니다.">
+              <img src={asset('assets/styles/10.png')} alt="" aria-hidden="true" className="style-tile-image" />
+              <span className="style-tile-label">캐릭터화</span>
+            </button>
+          </div>
+        )}
       </div>
+      ) : null}
 
-      {/* 2) 하위 분류: 나머지 스타일 비활성(그레이) 표시 */}
+      {/* 2) 하위 분류: generate=비활성 안내, edit=활성(단, 전통민화는 비활성) */}
       <div className="section-block">
         <div className="section-header section-header--with-hint">
           <div className="section-title-row">
             <img src={asset('assets/icons/style-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
             <h2 className="section-title">스타일</h2>
           </div>
-          <span className="section-hint section-hint--warning">2차 편집에서 사용 가능합니다.</span>
+          {!isEdit ? (
+            <span className="section-hint section-hint--warning">2차 편집에서 사용 가능합니다.</span>
+          ) : null}
         </div>
-        <StyleSelector
-          options={botariStyles.filter((s) => s.id !== 'traditional')}
-          selectedValue={''}
-          onSelect={() => { /* no-op when locked */ }}
-          locked={true}
-          allowedId="traditional" /* 모든 항목을 잠그기 위해 존재하지 않는 id로 비교 */
-          lockedMessage="2차 편집에서 사용 가능합니다."
-        />
+        {!isEdit ? (
+          <StyleSelector
+            options={botariStyles.filter((s) => s.id !== 'traditional')}
+            selectedValue={''}
+            onSelect={() => { /* no-op when locked */ }}
+            locked={true}
+            allowedId="traditional" /* 모든 항목을 잠그기 위해 존재하지 않는 id로 비교 */
+            lockedMessage="2차 편집에서 사용 가능합니다."
+          />
+        ) : (
+          <StyleSelector
+            options={botariStyles.filter((s) => s.id !== 'traditional')}
+            selectedValue={selectedStyle}
+            onSelect={(v) => {
+              if (v === 'traditional') return; // 전통민화는 비활성
+              onStyleSelect(v);
+            }}
+            locked={false}
+          />
+        )}
       </div>
 
-      <div className={`sidebar-prompt-actions${composedPrefix ? ' has-prefix' : ''}`}>
-        <div className="section-block section-block--prompt">
-          <div className="section-header section-header--with-hint">
+      {/* 배경요소 토글: 편집 모드에서만 노출 */}
+      {isEdit ? (
+        <div className="section-block">
+          <div className="section-header">
             <div className="section-title-row">
-              <img src={asset('assets/icons/prompt-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
-              <h2 className="section-title">프롬프트</h2>
+              <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
+              <h3 className="section-title">배경요소 <span className="section-hint" style={{ marginLeft: 6 }}>(ON/OFF)</span></h3>
             </div>
-            <span className="section-hint">선택한 생성 개체 프롬프트는 자동 입력됩니다.</span>
-          </div>
-          {/* 자동 입력 프롬프트(읽기 전용) */}
-          {composedPrefix ? (
-            <div className="prompt-prefix-card" aria-label="자동 입력 프롬프트">
-              <div ref={prefixBoxRef} className="prompt-prefix-text" title={composedPrefix}>{prefixTail}</div>
-              <button
-                type="button"
-                className="prompt-prefix-expand"
-                aria-label="전체 프롬프트 열기"
-                onClick={() => setPromptModalOpen(true)}
-              >
-                <img src={asset('assets/icons/expand.svg')} alt="" aria-hidden="true" />
-              </button>
-            </div>
-          ) : null}
-
-          {/* 사용자 입력 프롬프트 */}
-          <div className="prompt-card">
-            <textarea
-              ref={promptInputRef}
-              value={prompt}
-              onChange={(event) => onPromptChange(event.target.value)}
-              className="prompt-input"
-              style={{ fontSize: '14px', lineHeight: 1.45 }}
-              placeholder="생성할 이미지의 추가 설명을 입력하세요."
-            />
+            <button
+              type="button"
+              className={`editbar-switch${backgroundEnabled ? ' is-on' : ''}`}
+              aria-label="배경요소 전환"
+              aria-pressed={backgroundEnabled}
+              onClick={() => setBackgroundEnabled(!backgroundEnabled)}
+            >
+              <span className="editbar-switch-thumb" aria-hidden="true" />
+            </button>
           </div>
         </div>
+      ) : null}
 
-        <button type="button" className="generate-cta" onClick={onGenerate} disabled={!canGenerate}>
-          <img src={asset('assets/icons/generate.svg')} alt="" aria-hidden="true" className="generate-cta-icon" />
-          생성하기
-        </button>
+      {/* 캐릭터화 탭 전용: 배경요소 다음에 캐릭터 유형/포즈 */}
+      {isEdit && editActiveTab === 'character' ? (
+        <>
+          <div className="section-block">
+            <div className="section-header">
+              <div className="section-title-row">
+                <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
+                <h3 className="section-title">캐릭터 유형</h3>
+              </div>
+            </div>
+            <div className="segmented">
+              <button type="button" className={`segmented-item${editCharacterType === '2-short' ? ' is-active' : ''}`} onClick={() => setEditCharacterType('2-short')}>2족(단신)</button>
+              <button type="button" className={`segmented-item${editCharacterType === '2-tall' ? ' is-active' : ''}`} onClick={() => setEditCharacterType('2-tall')}>2족(장신)</button>
+              <button type="button" className={`segmented-item${editCharacterType === '4' ? ' is-active' : ''}`} onClick={() => setEditCharacterType('4')}>4족</button>
+            </div>
+          </div>
+          <div className="section-block">
+            <div className="section-header">
+              <div className="section-title-row">
+                <img src={asset('assets/icons/character-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
+                <h3 className="section-title">캐릭터 포즈</h3>
+              </div>
+            </div>
+            <div className="segmented segmented--two">
+              <button
+                type="button"
+                className={`segmented-item${editCharacterPose === 'default' ? ' is-active' : ''}`}
+                onClick={() => setEditCharacterPose('default')}
+              >
+                포즈없음
+              </button>
+              <button
+                type="button"
+                className={`segmented-item${editCharacterPose === 't' ? ' is-active' : ''}${editCharacterType === '4' ? ' is-disabled' : ''}`}
+                onClick={() => {
+                  if (editCharacterType === '4') return; // 4족일 때 T포즈 클릭 방지
+                  setEditCharacterPose('t');
+                }}
+                disabled={editCharacterType === '4'}
+                aria-disabled={editCharacterType === '4'}
+                title={editCharacterType === '4' ? '4족에서는 T포즈를 사용할 수 없습니다.' : undefined}
+              >
+                T포즈
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {!isEdit ? (
+        <div className={`sidebar-prompt-actions${composedPrefix ? ' has-prefix' : ''}`}>
+          <div className="section-block section-block--prompt">
+            <div className="section-header section-header--with-hint">
+              <div className="section-title-row">
+                <img src={asset('assets/icons/prompt-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
+                <h2 className="section-title">프롬프트</h2>
+              </div>
+              <span className="section-hint">선택한 생성 개체 프롬프트는 자동 입력됩니다.</span>
+            </div>
+            {composedPrefix ? (
+              <div className="prompt-prefix-card" aria-label="자동 입력 프롬프트">
+                <div ref={prefixBoxRef} className="prompt-prefix-text" title={composedPrefix}>{prefixTail}</div>
+                <button
+                  type="button"
+                  className="prompt-prefix-expand"
+                  aria-label="전체 프롬프트 열기"
+                  onClick={() => setPromptModalOpen(true)}
+                >
+                  <img src={asset('assets/icons/expand.svg')} alt="" aria-hidden="true" />
+                </button>
+              </div>
+            ) : null}
+            <div className="prompt-card">
+              <textarea
+                ref={promptInputRef}
+                value={prompt}
+                onChange={(event) => onPromptChange(event.target.value)}
+                className="prompt-input"
+                style={{ fontSize: '14px', lineHeight: 1.45 }}
+                placeholder="생성할 이미지의 추가 설명을 입력하세요."
+              />
+            </div>
+          </div>
+          <button type="button" className="generate-cta" onClick={onGenerate} disabled={!canGenerate}>
+            <img src={asset('assets/icons/generate.svg')} alt="" aria-hidden="true" className="generate-cta-icon" />
+            생성하기
+          </button>
+        </div>
+      ) : (
+        <div className={`sidebar-prompt-actions${composedPrefix ? ' has-prefix' : ''}`}>
+          <div className="section-block section-block--prompt">
+            <div className="section-header section-header--with-hint">
+              <div className="section-title-row">
+                <img src={asset('assets/icons/prompt-section.svg')} alt="" aria-hidden="true" className="section-title-icon" />
+                <h2 className="section-title">프롬프트</h2>
+              </div>
+              <span className="section-hint">선택한 생성 개체 프롬프트는 자동 입력됩니다.</span>
+            </div>
+            {composedPrefix ? (
+              <div className="prompt-prefix-card" aria-label="자동 입력 프롬프트">
+                <div ref={prefixBoxRef} className="prompt-prefix-text" title={composedPrefix}>{prefixTail}</div>
+                <button
+                  type="button"
+                  className="prompt-prefix-expand"
+                  aria-label="전체 프롬프트 열기"
+                  onClick={() => setPromptModalOpen(true)}
+                >
+                  <img src={asset('assets/icons/expand.svg')} alt="" aria-hidden="true" />
+                </button>
+              </div>
+            ) : null}
+            <div className="prompt-card">
+              <textarea
+                ref={promptInputRef}
+                value={prompt}
+                onChange={(event) => onPromptChange(event.target.value)}
+                className="prompt-input"
+                style={{ fontSize: '14px', lineHeight: 1.45 }}
+                placeholder="수정할 이미지의 설명을 입력하세요."
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="generate-cta"
+            onClick={() => onEditSubmit?.({ tab: editActiveTab, styleId: selectedStyle, backgroundEnabled, userPrompt: prompt, characterType: editCharacterType, pose: editCharacterPose })}
+          >
+            <img src={asset('assets/icons/generate.svg')} alt="" aria-hidden="true" className="generate-cta-icon" />
+            수정하기
+          </button>
+        </div>
+      )}
 
         {isPromptModalOpen
           ? ReactDOM.createPortal(
@@ -233,7 +422,6 @@ export function Sidebar({
               document.body
             )
           : null}
-      </div>
     </aside>
   );
 }

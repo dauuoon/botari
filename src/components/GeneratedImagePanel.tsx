@@ -91,9 +91,15 @@ export function GeneratedImagePanel({
   // const handleOpenEditMode = (mode: EditMode) => {};
 
   const handleApplyEdit = (values: EditValues) => {
+    // 즉시 반응: 지연 없이 부모로 위임하고 로딩은 부모에서 표시
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[Timing][Edit] click at', performance.now());
+    } catch {}
     const snapshot = buildSnapshot();
-    // 편집(수정하기)일 때 로딩 시간을 5초 추가
-    beginRefinement(() => onApplyEdit(values, snapshot), REFINE_DELAY_MS + 5000);
+    setIsRefining(true);
+    if (onRefineStatusChange) onRefineStatusChange(true);
+    onApplyEdit(values, snapshot);
   };
 
   const toggleBackgroundElements = () => {
