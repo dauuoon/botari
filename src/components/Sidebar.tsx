@@ -238,10 +238,15 @@ export function Sidebar({
           />
         ) : (
           <StyleSelector
-            options={botariStyles.filter((s) => s.id !== 'traditional')}
+            options={botariStyles.filter((s) => {
+              if (s.id === 'traditional') return false;
+              if (editActiveTab === 'keep' && (s.id === 'neon' || s.id === 'gameart')) return false; // 민화유지 탭에서는 네온/게임아트 제외
+              return true;
+            })}
             selectedValue={selectedStyle}
             onSelect={(v) => {
               if (v === 'traditional') return; // 전통민화는 비활성
+              if (editActiveTab === 'keep' && (v === 'neon' || v === 'gameart')) return; // 민화유지 탭에서 선택 차단
               onStyleSelect(v);
             }}
             locked={false}
@@ -395,7 +400,10 @@ export function Sidebar({
           <button
             type="button"
             className="generate-cta"
-            onClick={() => onEditSubmit?.({ tab: editActiveTab, styleId: selectedStyle, backgroundEnabled, userPrompt: prompt, characterType: editCharacterType, pose: editCharacterPose })}
+            onClick={() => {
+              const sanitizedStyle = (editActiveTab === 'keep' && (selectedStyle === 'neon' || selectedStyle === 'gameart')) ? '' : selectedStyle;
+              onEditSubmit?.({ tab: editActiveTab, styleId: sanitizedStyle, backgroundEnabled, userPrompt: prompt, characterType: editCharacterType, pose: editCharacterPose });
+            }}
           >
             <img src={asset('assets/icons/generate.svg')} alt="" aria-hidden="true" className="generate-cta-icon" />
             수정하기
