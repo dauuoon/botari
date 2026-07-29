@@ -358,6 +358,9 @@ export default function App() {
     if (ref.includes('assets/generated/haetae/haetae_02/')) {
       return asset('assets/generated/haetae/haetae_02/haetae_3D/haetae_3D_02.glb');
     }
+    if (ref.includes('assets/generated/dragon/')) {
+      return asset('assets/generated/dragon/dragon_3D/dragon_3D_01.glb');
+    }
     return defaultModelGlbUrl;
   }, [selected2dDetailItem?.imageSrc, latest2dHistoryItem?.imageSrc]);
   const groupedHistoryItems = useMemo(() => {
